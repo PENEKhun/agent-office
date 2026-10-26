@@ -115,9 +115,10 @@ test('keeps side-agent IDs distinct when transcript session IDs equal the parent
 });
 
 test('uses Claude Desktop source and clears relative cwd paths', () => {
-  const root = join('appdata', 'Claude', 'local-agent-mode-sessions');
+  const root = 'C:\\Users\\example\\AppData\\Roaming\\Claude\\local-agent-mode-sessions';
   const adapter = createClaudeCodeAdapter({
     now: () => 1000,
+    platform: 'darwin',
     roots: () => [root],
     desktopRoot: () => root
   });

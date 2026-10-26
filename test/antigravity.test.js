@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadAdapters } from '../src/adapters/index.js';
-import antigravityAdapter, { createAntigravityAdapter } from '../src/adapters/antigravity.js';
+import antigravityAdapter, { createAntigravityAdapter, workspaceProject } from '../src/adapters/antigravity.js';
 import { validateEvent } from '../src/core/events.js';
 
 const directories = [];
@@ -134,6 +134,11 @@ test('reads summary metadata read-only and starts from the transcript, ending wh
   assert.equal(ends.length, 1);
   assert.equal(ends[0].kind, 'session_end');
   assert.equal(ends[0].sessionId, conversationId);
+});
+
+test('workspace file URIs normalize Windows drives and POSIX paths on every host OS', () => {
+  assert.equal(workspaceProject('file:///C:/Workspace/Agent%20Office'), 'c:/Workspace/Agent Office');
+  assert.equal(workspaceProject('file:///home/runner/Agent%20Office'), '/home/runner/Agent Office');
 });
 
 test('clears stale FIFO calls when a new user turn begins', () => {

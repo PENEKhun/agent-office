@@ -49,7 +49,7 @@ esac
 output="$repo/.package-mac"
 mkdir -p "$output"
 curl -fsSL 'https://nodejs.org/dist/index.json' -o "$output/index.json"
-node_version="$(node -e 'const fs=require("node:fs"); const [arch,path]=process.argv.slice(1); const file=`darwin-${arch}-tar`; const releases=JSON.parse(fs.readFileSync(path,"utf8")); const release=releases.find((item)=>item.version.startsWith("v24.")&&item.files.includes(file)); if(!release) process.exit(2); process.stdout.write(release.version);' "$node_arch" "$output/index.json")"
+node_version="$(node -e 'const fs=require("node:fs"); const [arch,path]=process.argv.slice(1); const file=`osx-${arch}-tar`; const releases=JSON.parse(fs.readFileSync(path,"utf8")); const release=releases.find((item)=>item.version.startsWith("v24.")&&item.files.includes(file)); if(!release) process.exit(2); process.stdout.write(release.version);' "$node_arch" "$output/index.json")"
 archive="node-${node_version}-darwin-${node_arch}.tar.gz"
 base_url="https://nodejs.org/dist/${node_version}"
 curl -fsSL "$base_url/$archive" -o "$output/$archive"

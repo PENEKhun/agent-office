@@ -1,7 +1,6 @@
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { detectGitAction, isSearchCommand } from '../lib/git-detect.js';
 import { redactCommand, redactFilePath, redactMcpName } from '../lib/redact.js';
@@ -12,7 +11,7 @@ const DATABASE_INTERVAL_MS = 10000;
 const SKIPPED_BRAIN_DIRS = new Set(['scratch', '.user_uploaded', '.tempmediaStorage']);
 const IGNORED_ROW_TYPES = new Set(['SYSTEM_MESSAGE', 'CHECKPOINT', 'ERROR_MESSAGE']);
 
-function workspaceProject(value) {
+export function workspaceProject(value) {
   if (typeof value !== 'string' || !value) {
     return null;
   }
@@ -29,7 +28,7 @@ function workspaceProject(value) {
       continue;
     }
     try {
-      const path = uri.startsWith('file:') ? fileURLToPath(new URL(uri)) : uri;
+      const path = uri.startsWith('file:') ? fileUriPath(uri) : uri;
       const normalized = normalizeProjectPath(path);
       if (normalized) {
         return normalized;
@@ -39,6 +38,15 @@ function workspaceProject(value) {
     }
   }
   return null;
+}
+
+function fileUriPath(uri) {
+  const parsed = new URL(uri);
+  if (parsed.protocol !== 'file:') return null;
+  let pathname = decodeURIComponent(parsed.pathname);
+  if (parsed.hostname) pathname = `//${parsed.hostname}${pathname}`;
+  if (/^\/[A-Za-z]:\//u.test(pathname)) pathname = pathname.slice(1);
+  return pathname;
 }
 
 function timestamp(value, now) {

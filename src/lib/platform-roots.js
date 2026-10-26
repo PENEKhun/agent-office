@@ -19,12 +19,16 @@ export function normalizeProjectPath(value) {
 
 export function isPathInside(root, target, platform = process.platform) {
   const relative = relativePath(root, target, platform);
-  const separator = platform === 'win32' || /^[A-Za-z]:[\\/]|^\\\\/u.test(root) ? '\\' : '/';
+  const separator = windowsPath(root) || windowsPath(target) || platform === 'win32' ? '\\' : '/';
   return relative !== '' && relative !== '..' && !relative.startsWith(`..${separator}`) && !path.win32.isAbsolute(relative) && !path.posix.isAbsolute(relative);
 }
 
+function windowsPath(value) {
+  return typeof value === 'string' && (/^[A-Za-z]:[\\/]/u.test(value) || /^\\\\/u.test(value));
+}
+
 export function relativePath(root, target, platform = process.platform) {
-  const pathApi = platform === 'win32' || /^[A-Za-z]:[\\/]|^\\\\/u.test(root)
+  const pathApi = platform === 'win32' || windowsPath(root) || windowsPath(target)
     ? path.win32 : path.posix;
   return pathApi.relative(root, target);
 }

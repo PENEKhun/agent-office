@@ -63,6 +63,8 @@ test('path interpretation accepts POSIX, drive, and UNC paths without confusing 
   assert.equal(isPathInside('/home/example', '/home/elsewhere/file.jsonl', 'linux'), false);
   assert.equal(isPathInside('C:\\logs', 'C:\\logs\\rollout-a.jsonl', 'win32'), true);
   assert.equal(isPathInside('C:\\logs', 'C:\\other\\rollout-a.jsonl', 'win32'), false);
+  assert.equal(isPathInside('C:\\logs', 'C:\\logs\\rollout-a.jsonl', 'darwin'), true);
+  assert.equal(isPathInside('\\\\server\\share', '\\\\server\\share\\session.jsonl', 'linux'), true);
   assert.equal(isNetworkPath('\\\\server\\share'), true);
   assert.equal(isNetworkPath('//server/share'), true);
   assert.equal(isNetworkPath('/home/example'), false);

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createDemo, parseClockSpeed } from '../src/server/demo.js';
 import { validateEvent } from '../src/core/events.js';
+import { normalizeProjectPath } from '../src/lib/platform-roots.js';
 
 test('demo starts three sources, one child, and uses an absolute project path', () => {
   const events = [];
@@ -9,7 +10,7 @@ test('demo starts three sources, one child, and uses an absolute project path', 
   stop();
   assert.equal(events.every(validateEvent), true);
   assert.deepEqual(new Set(events.map((event) => event.source)), new Set(['claude-code', 'codex', 'antigravity']));
-  assert.ok(events.every((event) => /^[A-Za-z]:\//.test(event.project) || event.project.startsWith('//')));
+  assert.ok(events.every((event) => normalizeProjectPath(event.project) !== null));
   assert.equal(events.filter((event) => event.kind === 'spawn').length, 1);
   assert.ok(events.some((event) => event.agentId === 'demo-subagent' && event.parentAgentId === 'demo-codex'));
 });
