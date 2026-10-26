@@ -1,0 +1,2 @@
+{"type":"assistant","timestamp":"<redacted>","cwd":"<redacted>","isSidechain":false,"sessionId":"<redacted>","message":{"content":[{"type":"thinking","thinking":"<redacted>"},{"type":"tool_use","id":"<redacted>","name":"Read","input":{"file_path":"<redacted>"}}]}}
+{"type":"user","timestamp":"<redacted>","cwd":"<redacted>","isSidechain":false,"sessionId":"<redacted>","message":{"content":[{"type":"tool_result","tool_use_id":"<redacted>","content":"<redacted>"}]}}

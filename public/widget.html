@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Agent Office Widget</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden}
+    body{position:relative;background:transparent;color:#263746;font:12px/1.3 system-ui,sans-serif;border-radius:14px}
+    #pip-content{position:absolute;inset:0;border-radius:14px;overflow:hidden;background:transparent}
+    #pip-content,#pip-office,#map-host,#map-host canvas,#pip-mini,#agents{background-color:transparent}
+    #widget-background[hidden]{display:none!important}
+    #widget-background{position:absolute;inset:0;border-radius:14px;background:radial-gradient(ellipse at 50% 40%,#fbfdfd,#eff5f6 72%);box-shadow:0 4px 20px rgba(38,52,59,.2);pointer-events:none}
+    #pip-office,#pip-mini{position:absolute;inset:0;width:100%;height:100%}
+    #pip-office{overflow:hidden;background:transparent}
+    #pip-office canvas{display:block;width:100%;height:100%;touch-action:none}
+    #pip-mini{display:flex;align-items:center;overflow:hidden;padding:0 8px}
+    body.mini-mode #pip-content{display:flex;align-items:center}body.mini-mode #pip-mini{position:relative;inset:auto;flex:1;width:100%;height:100%;min-height:0;padding:0 8px;align-items:center}
+    body.mini-mode #agents{align-items:center;height:100%}body.mini-mode .agent{height:24px}body.mini-mode .agent+.agent::before{height:18px}body.mini-mode .more{height:24px}
+    #agents{width:100%;display:flex;align-items:center;gap:8px;overflow:hidden;white-space:nowrap}
+    .agent{position:relative;flex:0 0 40px;height:40px;display:grid;grid-template-columns:16px 8px 16px;align-items:center;justify-items:center}
+    .agent+.agent::before{content:'';position:absolute;left:-4px;width:1px;height:24px;background:#E6ECEF}.agent img{width:15px;height:15px}.agent img.activity-symbol{width:16px;height:16px}
+    .status{width:7px;height:7px;border-radius:50%;background:#AAB4BA}.status-working{background:#39A979}.status-thinking{background:#E8B949}.status-gone{background:#D8DEE2}
+    #map-host{position:absolute;inset:0;overflow:hidden}#map-host canvas{display:block;width:100%;height:100%;touch-action:none}
+    .map-foot{display:none}#widget-hidden-controls{display:none}
+  </style>
+</head>
+<body>
+  <main id="pip-content"><div id="widget-background"></div><div id="pip-office"><div id="map-host"></div></div><div id="pip-mini" hidden><div id="agents"></div></div></main>
+  <section id="widget-settings" hidden role="dialog" aria-modal="false" aria-labelledby="widget-settings-title" aria-hidden="true">
+    <div class="settings-header"><h1 id="widget-settings-title">Agent Office 설정</h1><button id="settings-close" type="button" aria-label="설정 닫기">×</button></div>
+    <div class="settings-body">
+      <section id="connection-screen" class="settings-group" aria-labelledby="connection-title"><h2 id="connection-title">연결 상태</h2><p id="connection-explanation">이 PC의 기록 폴더 상태를 확인합니다. 클라우드 세션은 표시되지 않습니다.</p>
+        <div id="connection-sources"></div>
+        <form id="connection-form"><select id="connection-source" aria-label="연결할 출처"><option value="claude-code">Claude Code</option><option value="claude-desktop">Claude Desktop</option><option value="codex">Codex</option><option value="antigravity">Antigravity</option></select><div id="connection-path-row"><input id="connection-path" aria-label="기록 폴더 경로" placeholder="기록 폴더 경로" required><button type="submit" aria-label="폴더 연결">폴더 연결</button></div></form>
+        <button id="connection-reset" type="button" aria-label="기본값으로 되돌리기">기본값으로 되돌리기</button><div id="connection-message" role="status" aria-live="polite"></div>
+      </section>
+      <section id="settings-shortcuts" class="settings-group" aria-labelledby="settings-shortcuts-title"><h2 id="settings-shortcuts-title">단축키</h2><p>Ctrl+Alt+O · 마우스 통과 켜기 또는 끄기</p></section>
+    </div>
+  </section>
+  <div id="widget-hidden-controls">
+    <button id="zoom-in"></button><button id="zoom-out"></button><button id="reset-view"></button>
+    <button id="presentation-toggle"></button><span id="presentation-badge" hidden></span>
+    <nav id="floor-list"></nav><span id="floor-count"></span><div id="room-legend"></div>
+    <span id="floor-name"></span><span id="floor-path"></span><span id="agent-count"></span>
+    <div id="people-list"></div><ol id="activity-list"></ol>
+  </div>
+  <script src="/vendor/pixi.min.js"></script>
+  <script type="module" src="/office.js"></script>
+</body>
+</html>

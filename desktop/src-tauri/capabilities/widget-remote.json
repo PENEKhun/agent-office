@@ -1,0 +1,25 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "widget-remote",
+  "description": "Loopback window controls and the persisted widget opacity settings.",
+  "windows": ["main"],
+  "remote": {
+    "urls": [
+      "http://127.0.0.1:4777/*", "http://127.0.0.1:4778/*", "http://127.0.0.1:4779/*",
+      "http://127.0.0.1:4780/*", "http://127.0.0.1:4781/*", "http://127.0.0.1:4782/*",
+      "http://127.0.0.1:4783/*", "http://127.0.0.1:4784/*", "http://127.0.0.1:4785/*",
+      "http://127.0.0.1:4786/*", "http://127.0.0.1:4787/*"
+    ]
+  },
+  "permissions": [
+    "core:window:allow-start-dragging",
+    "core:window:allow-hide",
+    "core:window:allow-set-size",
+    "core:window:allow-show",
+    "core:window:allow-set-ignore-cursor-events",
+    "allow-load-widget-settings",
+    "allow-save-widget-settings",
+    "allow-set-mouse-passthrough",
+    "allow-mouse-passthrough-enabled"
+  ]
+}

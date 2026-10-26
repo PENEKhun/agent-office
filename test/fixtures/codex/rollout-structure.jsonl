@@ -1,0 +1,11 @@
+{"timestamp":"<redacted>","type":"session_meta","payload":{"id":"<redacted>","cwd":"<redacted>"}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"task_started"}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","started_at_ms":1,"completed_at_ms":2,"item":{"type":"CommandExecution","command":"<redacted>","exit_code":0}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","completed_at_ms":3,"item":{"type":"FileChange","changes":[{"path":"<redacted>"}]}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","completed_at_ms":4,"item":{"type":"McpToolCall","server":"<redacted>","tool":"<redacted>","arguments":"<redacted>","result":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","completed_at_ms":5,"item":{"type":"Extension","kind":"<redacted>","id":"<redacted>","query":"<redacted>","action":"<redacted>","results":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","item":{"type":"Reasoning","text":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","item":{"type":"AgentMessage","message":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","item":{"type":"UserMessage","message":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"item_completed","item":{"type":"ImageView","path":"<redacted>"}}}
+{"timestamp":"<redacted>","type":"event_msg","payload":{"type":"task_complete"}}

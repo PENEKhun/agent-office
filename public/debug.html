@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Agent Office 상태 디버그</title>
+  <style>
+    :root { color-scheme: dark; font: 14px/1.5 system-ui, sans-serif; background: #10151c; color: #e6edf5; }
+    body { margin: 0; padding: 24px; }
+    header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 20px; }
+    h1 { font-size: 22px; margin: 0; }
+    #updated { color: #93a4b8; }
+    .floor { margin: 0 0 20px; border: 1px solid #283442; border-radius: 10px; overflow: hidden; }
+    .floor h2 { font-size: 16px; margin: 0; padding: 10px 14px; background: #1b2632; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 12px; border-top: 1px solid #25313d; }
+    th { color: #a9bacb; font-weight: 600; }
+    .child td:first-child { padding-left: 34px; color: #c2d3e4; }
+    .status { display: inline-block; border-radius: 12px; padding: 1px 9px; background: #26384b; }
+    .working { color: #6ee7a8; } .thinking { color: #f5d36b; }
+    .idle { color: #aab6c4; } .leaving, .gone { color: #778493; }
+    .empty { color: #93a4b8; padding: 18px; }
+    #activity { color: #c5d0dc; }
+  </style>
+</head>
+<body>
+  <header><h1>Agent Office 상태 디버그</h1><span id="updated">연결 중…</span></header>
+  <main id="floors"></main>
+  <section><h2>최근 활동</h2><ol id="activity"></ol></section>
+  <script>
+    const floorsElement = document.querySelector('#floors');
+    const activityElement = document.querySelector('#activity');
+    const updatedElement = document.querySelector('#updated');
+    const formatTime = (value) => new Date(value).toLocaleTimeString();
+
+    function render(snapshot) {
+      floorsElement.replaceChildren();
+      for (const floor of snapshot.floors) {
+        const section = document.createElement('section');
+        section.className = 'floor';
+        const heading = document.createElement('h2');
+        heading.textContent = `${floor.name} · ${floor.agents.filter((agent) => !agent.parentId).length} 세션`;
+        section.append(heading);
+        const table = document.createElement('table');
+        table.innerHTML = '<thead><tr><th>에이전트</th><th>소스</th><th>상태</th><th>방</th><th>도구</th><th>최근 이벤트</th></tr></thead>';
+        const body = document.createElement('tbody');
+        for (const agent of floor.agents) {
+          const row = document.createElement('tr');
+          if (agent.parentId) row.className = 'child';
+          const name = document.createElement('td');
+          name.textContent = `${agent.parentId ? '↳ ' : ''}${agent.placeholder ? '빈 서브에이전트 슬롯' : agent.agentId}`;
+          const source = document.createElement('td'); source.textContent = agent.source;
+          const statusCell = document.createElement('td');
+          const status = document.createElement('span'); status.className = `status ${agent.status}`; status.textContent = agent.status;
+          statusCell.append(status);
+          const room = document.createElement('td'); room.textContent = agent.room ?? '—';
+          const tools = document.createElement('td'); tools.textContent = String(agent.toolCount);
+          const detail = document.createElement('td'); detail.textContent = agent.detail ?? '—';
+          row.append(name, source, statusCell, room, tools, detail); body.append(row);
+        }
+        table.append(body); section.append(table); floorsElement.append(section);
+      }
+      if (!snapshot.floors.length) {
+        const empty = document.createElement('p'); empty.className = 'empty'; empty.textContent = '표시할 에이전트가 없습니다.';
+        floorsElement.append(empty);
+      }
+      if (snapshot.moreFloors > 0) {
+        const more = document.createElement('p'); more.className = 'empty';
+        more.textContent = `그 외 ${snapshot.moreFloors}개 층`;
+        floorsElement.append(more);
+      }
+      activityElement.replaceChildren();
+      for (const item of snapshot.activity) {
+        const row = document.createElement('li');
+        row.textContent = `${formatTime(item.ts)} · ${item.source} · ${item.kind}${item.detail ? ` · ${item.detail}` : ''}`;
+        activityElement.append(row);
+      }
+      updatedElement.textContent = `갱신 ${formatTime(snapshot.now)}`;
+    }
+
+    fetch('/api/state').then((response) => response.json()).then(render);
+    const stream = new EventSource('/events');
+    stream.addEventListener('snapshot', (event) => render(JSON.parse(event.data)));
+    stream.addEventListener('delta', (event) => render(JSON.parse(event.data)));
+    stream.onerror = () => { updatedElement.textContent = '연결 재시도 중…'; };
+  </script>
+</body>
+</html>

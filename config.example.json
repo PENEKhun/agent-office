@@ -1,0 +1,25 @@
+{
+  "port": 4777,
+  "idleAfterSec": 60,
+  "goneAfterSec": 360,
+  "lighting": "auto",
+  "presentationMode": false,
+  "sources": {
+    "claude-code": {
+      "enabled": true,
+      "path": null
+    },
+    "codex": {
+      "enabled": true,
+      "path": null
+    },
+    "antigravity": {
+      "enabled": true,
+      "path": null
+    },
+    "claude-desktop": {
+      "enabled": true,
+      "path": null
+    }
+  }
+}

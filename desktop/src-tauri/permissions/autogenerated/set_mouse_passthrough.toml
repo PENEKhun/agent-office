@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-mouse-passthrough"
+description = "Enables the set_mouse_passthrough command without any pre-configured scope."
+commands.allow = ["set_mouse_passthrough"]
+
+[[permission]]
+identifier = "deny-set-mouse-passthrough"
+description = "Denies the set_mouse_passthrough command without any pre-configured scope."
+commands.deny = ["set_mouse_passthrough"]

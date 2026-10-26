@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Agent Office Mini</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { font-family: system-ui, sans-serif; }
+    #mini { width: 100%; height: 100%; display: flex; align-items: center; overflow: hidden; padding: 8px; }
+    #agents { width: 100%; display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }
+    .agent { position: relative; flex: 0 0 40px; height: 40px; display: grid; grid-template-columns: 16px 8px 16px; align-items: center; justify-items: center; }
+    .agent + .agent::before { content: ''; position: absolute; left: -4px; width: 1px; height: 24px; background: #E6ECEF; }
+    .agent img { width: 15px; height: 15px; }
+    .agent img.activity-symbol { width: 16px; height: 16px; }
+    .status { width: 7px; height: 7px; border-radius: 50%; background: #AAB4BA; }
+    .status-working { background: #39A979; }
+    .status-thinking { background: #E8B949; }
+    .status-idle, .status-arriving, .status-leaving { background: #AAB4BA; }
+    .status-gone { background: #D8DEE2; }
+    .more { flex: 0 0 36px; height: 32px; display: grid; place-items: center; color: #566771; font-size: 11px; font-weight: 700; }
+    #empty { color: #647681; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <main id="mini" aria-label="Agent Office 미니 위젯"><div id="agents"></div></main>
+  <script type="module" src="/mini.js"></script>
+</body>
+</html>

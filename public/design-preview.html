@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>Office art preview</title>
+<style>html,body{margin:0;height:100%;background:#F3F6F7}#host{width:100%;height:100%}</style></head>
+<body><div id="host"></div>
+<script src="/vendor/pixi.min.js"></script>
+<script type="module">
+import { drawOffice, drawCharacter, drawNamePlate, drawBubble } from '/office-art.js';
+import { ROOMS, iso, depthOf, createSeatAllocator } from '/floor-plan.js';
+const PIXI = window.PIXI;
+const host = document.querySelector('#host');
+const app = new PIXI.Application();
+await app.init({ resizeTo: host, antialias: true, backgroundColor: 0xF3F6F7, resolution: 2, autoDensity: true });
+host.append(app.canvas);
+const office = drawOffice(PIXI);
+const world = new PIXI.Container();
+world.addChild(office.root);
+app.stage.addChild(world);
+const icons = {
+  claude: await PIXI.Assets.load('/assets/icons/anthropic.svg'),
+  codex: await PIXI.Assets.load('/assets/icons/openai.svg'),
+  gemini: await PIXI.Assets.load('/assets/icons/googlegemini.svg')
+};
+const COLORS = { claude: 0xD97757, codex: 0x10A37F, gemini: 0x4285F4 };
+const NAMES = { claude: 'Claude', codex: 'Codex', gemini: 'Antigravity' };
+const seats = createSeatAllocator();
+const people = (new URLSearchParams(location.search).get('crowd') ? [
+  ['claude','dev','코드 수정 중 · state.js'],['codex','dev','코드 수정 중 · tail.js'],['gemini','dev','고민 중… 12초','think'],
+  ['claude','server','명령 실행 중 · npm'],['codex','server','명령 실행 중 · git'],['gemini','library','자료 찾는 중 · SPEC.md'],
+  ['claude','meeting','계획 세우는 중'],['codex','search','검색 중 · docs/search'],['gemini','lounge','쉬는 중','idle'],
+  ['claude','lounge',null],['codex','desk','정리 중'],['gemini','elevator',null]
+] : [
+  ['claude','dev','코드 수정 중 · office.js'],['codex','server','명령 실행 중 · git'],['gemini','library','자료 찾는 중 · SPEC.md'],
+  ['claude','meeting','고민 중… 8초','think'],['codex','search','검색 중 · docs/search'],['gemini','lounge','쉬는 중','idle']
+]);
+const bubbles = new PIXI.Container();
+people.forEach(([src, room, text, tone], i) => {
+  const p = seats.assign(`a${i}`, room);
+  const pos = iso(p.x, p.y);
+  const ch = drawCharacter(PIXI, { color: COLORS[src], seed: i, hat: i === 4 ? 0xF6D27A : null });
+  ch.position.set(pos.x, pos.y);
+  ch.zIndex = depthOf(p.x, p.y) + 1;
+  office.objects.addChild(ch);
+  const plate = drawNamePlate(PIXI, { text: `${NAMES[src]} · ${(i * 2654435761 % 65536).toString(16).padStart(4,'0')}`, color: COLORS[src], icon: icons[src] });
+  plate.position.set(pos.x, pos.y - 80);
+  bubbles.addChild(plate);
+  if (text) {
+    const b = drawBubble(PIXI, { text, tone: tone ?? 'work' });
+    b.position.set(pos.x, pos.y - 94);
+    bubbles.addChild(b);
+  }
+});
+office.root.addChild(bubbles);
+function fit() {
+  const b = office.bounds, w = b.maxX - b.minX, h = b.maxY - b.minY - 60;
+  const s = Math.min(host.clientWidth * 0.94 / w, host.clientHeight * 0.94 / (h + 80));
+  world.scale.set(s);
+  world.position.set((host.clientWidth - w * s) / 2 - b.minX * s, (host.clientHeight - (h + 80) * s) / 2 - (b.minY - 70) * s);
+}
+fit(); window.ready = true;
+</script></body></html>

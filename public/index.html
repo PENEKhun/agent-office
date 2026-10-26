@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%2345a58a'/%3E%3Ctext x='20' y='28' text-anchor='middle' font-size='27' fill='white'%3E✦%3C/text%3E%3C/svg%3E">
+  <title>Agent Office</title>
+  <style>
+    :root { font: 14px/1.45 Inter, Pretendard, "Noto Sans KR", system-ui, sans-serif; color: #263746; background: #edf3f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-width: 980px; min-height: 640px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    header { height: 68px; flex: 0 0 68px; display: flex; align-items: center; gap: 14px; padding: 0 24px; background: #fff; border-bottom: 1px solid #dce5eb; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; letter-spacing: -.4px; }
+    .brand-mark { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; color: white; background: linear-gradient(145deg,#81c6b2,#45a58a); box-shadow: 0 3px 8px #45a58a44; }
+    .crumb { color: #8a9aa7; border-left: 1px solid #d9e1e7; padding-left: 14px; }
+    .top-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .live { color: #468d73; font-size: 12px; font-weight: 700; display: flex; gap: 7px; align-items: center; }
+    .live i { width: 8px; height: 8px; border-radius: 50%; background: #67c49b; box-shadow: 0 0 0 4px #e6f6ee; }
+    #presentation-toggle { padding: 6px 10px; font-size: 12px; }
+    #pip-toggle[hidden] { display: none; }
+    #theme-select { border: 1px solid #dce5eb; border-radius: 9px; padding: 7px 9px; color: #536575; background: white; font: inherit; cursor: pointer; }
+    #presentation-badge { border-radius: 999px; padding: 5px 9px; color: #576d7c; background: #edf3f7; font-size: 11px; font-weight: 700; }
+    #presentation-badge[hidden] { display: none; }
+    .top-link, button { border: 1px solid #dce5eb; border-radius: 9px; padding: 7px 11px; color: #536575; background: white; font: inherit; text-decoration: none; cursor: pointer; }
+    .top-link:hover, button:hover { background: #f5f8fa; }
+    .layout { min-height: 0; flex: 1; display: grid; grid-template-columns: 230px minmax(460px,1fr) 300px; gap: 14px; padding: 14px; }
+    aside, .center { min-height: 0; border: 1px solid #e1e8ed; border-radius: 16px; background: #fff; box-shadow: 0 5px 20px #34515c0b; overflow: hidden; }
+    aside { display: flex; flex-direction: column; }
+    .panel-title { display: flex; align-items: center; justify-content: space-between; padding: 17px 17px 12px; font-weight: 800; }
+    .muted { color: #92a0aa; font-size: 12px; font-weight: 500; }
+    #floor-list { padding: 0 10px; overflow: auto; }
+    .floor-card { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; border: 0; border-radius: 11px; padding: 10px; margin: 2px 0; }
+    .floor-card.selected { background: #eef8f4; color: #357d66; }
+    .floor-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: #f1f5f7; font-size: 17px; }
+    .floor-card.selected .floor-icon { background: #dbf0e7; }
+    .floor-copy { min-width: 0; flex: 1; } .floor-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .floor-copy small { color: #93a0aa; font-size: 11px; }
+    .middle { border-top: 1px solid #edf1f4; margin-top: auto; padding: 15px 17px; }
+    .middle h3, .right-panel h3 { font-size: 12px; letter-spacing: .3px; margin: 0 0 10px; color: #788995; }
+    #room-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 4px; color: #6c7d89; font-size: 11px; }
+    .room-item { display: flex; align-items: center; gap: 6px; min-width: 0; }
+    .room-item > span:nth-child(2) { min-width: 0; overflow-wrap: normal; word-break: keep-all; }
+    .room-item .swatch { flex: 0 0 11px; width: 11px; height: 11px; border-radius: 4px; border: 1px solid #cbd7dc; }
+    .center { position: relative; display: flex; flex-direction: column; background: #f7fafb; }
+    .map-head { height: 58px; flex: 0 0 58px; display: flex; align-items: center; padding: 0 17px; border-bottom: 1px solid #e7edf0; background: #fff; }
+    #floor-name { font-size: 16px; font-weight: 800; }
+    #floor-path { color: #94a1ab; font-size: 11px; margin-left: 9px; }
+    .map-controls { margin-left: auto; display: flex; gap: 6px; }
+    .map-controls button { padding: 5px 9px; font-size: 12px; }
+    .view-angle { min-width: 34px; align-self: center; text-align: center; color: #7b8b96; font-size: 11px; font-variant-numeric: tabular-nums; }
+    #map-host { position: relative; min-height: 0; flex: 1; overflow: hidden; background: radial-gradient(ellipse at 50% 40%,#fbfdfd,#eff5f6 72%); }
+    #map-host canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .map-foot { position: absolute; bottom: 12px; left: 15px; color: #94a2ac; font-size: 11px; pointer-events: none; }
+    .right-panel { min-height: 0; overflow: hidden; }
+    .people { max-height: 45%; overflow: auto; padding: 0 12px 12px; }
+    .person { display: flex; align-items: center; gap: 9px; padding: 9px 5px; border-bottom: 1px solid #eef2f4; }
+    .person { cursor: pointer; border-radius: 8px; }
+    .person:hover, .person.selected { background: #eef8f4; }
+    .person-color { width: 10px; height: 26px; border-radius: 5px; }
+    .person-main { min-width: 0; flex: 1; }
+    .person-main strong { display: block; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .person-main small { display: block; color: #94a1aa; font-size: 10px; }
+    .person-status { border-radius: 20px; padding: 3px 7px; background: #f1f5f6; color: #71808b; font-size: 10px; }
+    .status-working { color: #39876c; background: #e9f7ef; } .status-thinking { color: #987a2a; background: #fff6dd; }
+    .activities { min-height: 0; flex: 1; display: flex; flex-direction: column; border-top: 1px solid #edf1f4; }
+    #activity-list { min-height: 0; flex: 1; overflow: auto; list-style: none; margin: 0; padding: 0 15px 14px; }
+    .activity { display: grid; grid-template-columns: 38px 16px minmax(52px,auto) 1fr; align-items: start; gap: 5px; padding: 8px 0; border-bottom: 1px solid #f0f3f5; font-size: 10px; }
+    .activity time { color: #9aa7b0; font-variant-numeric: tabular-nums; }
+    .activity span { color: #5b6d79; overflow-wrap: anywhere; }
+    .activity-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #71808b; font-size: 9px; }
+    .activity-icon { width: 15px; height: 15px; }
+    .empty { padding: 14px; color: #9aa7b0; font-size: 12px; }
+    @media(max-width:1120px) { .layout { grid-template-columns: 190px minmax(420px,1fr) 250px; gap: 9px; padding: 9px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="brand-mark">✦</span> Agent Office</div>
+    <div class="crumb">실시간 에이전트 오피스</div>
+    <div class="top-right"><span class="live"><i></i> LIVE</span><select id="theme-select" aria-label="테마 선택"></select><button id="pip-toggle" type="button" hidden>PiP</button><button id="presentation-toggle" type="button" aria-pressed="false">발표 모드</button><span id="presentation-badge" hidden>발표 모드</span><a class="top-link" href="/debug">디버그 보기 ↗</a></div>
+  </header>
+  <main class="layout">
+    <aside>
+      <div class="panel-title"><span>층별 안내</span><span id="floor-count" class="muted">0개 층</span></div>
+      <nav id="floor-list"></nav>
+      <div class="middle"><h3>어디서 무엇을 하나</h3><div id="room-legend"></div></div>
+    </aside>
+    <section class="center">
+      <div class="map-head"><span id="floor-name">모든 프로젝트</span><span id="floor-path"></span>
+        <div class="map-controls"><button id="rotate-left" aria-label="왼쪽으로 회전" title="왼쪽으로 45도 회전 ( [ )">⟲</button><span id="view-angle" class="view-angle" aria-live="polite">45°</span><button id="rotate-right" aria-label="오른쪽으로 회전" title="오른쪽으로 45도 회전 ( ] )">⟳</button><button id="zoom-out" aria-label="축소">−</button><button id="zoom-in" aria-label="확대">+</button><button id="reset-view">초기화</button></div>
+      </div>
+      <div id="map-host"><div class="map-foot">드래그하여 이동 · 휠로 확대/축소</div></div>
+    </section>
+    <aside class="right-panel">
+      <div class="panel-title"><span>사무실 사람들</span><span id="agent-count" class="muted">0명</span></div>
+      <div id="people-list" class="people"></div>
+      <div class="activities"><div class="panel-title"><span>활동 로그</span><span class="muted">최근 50개</span></div><ol id="activity-list"></ol></div>
+    </aside>
+  </main>
+  <script src="/vendor/pixi.min.js"></script>
+  <script type="module" src="/office.js"></script>
+</body>
+</html>
