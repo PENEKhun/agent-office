@@ -18,7 +18,9 @@ export function suggestSourcePath(source, path) {
   const child = source.startsWith('claude-') && leaf === '.claude' ? 'projects'
     : source === 'codex' && leaf === '.codex' ? 'sessions'
       : source === 'antigravity' && leaf === '.gemini' ? 'antigravity/brain'
-        : source === 'antigravity' && leaf === 'antigravity' ? 'brain' : null;
+        : source === 'antigravity' && leaf === 'antigravity' ? 'brain'
+          : source === 'opencode' && leaf === '.local' ? 'share/opencode'
+            : source === 'opencode' && leaf === 'share' ? 'opencode' : null;
   if (!child) return null;
   const separator = normalized.includes('\\') ? '\\' : '/';
   return `${normalized}${separator}${child.replace(/[\\/]/g, separator)}`;

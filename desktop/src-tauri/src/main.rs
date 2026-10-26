@@ -101,17 +101,30 @@ fn configured_server_dir(app: &AppHandle<Wry>) -> PathBuf {
     project_server_dir()
 }
 
-fn node_executable(resource_dir: &Path) -> PathBuf {
-    let bundled = resource_dir.join("node.exe");
-    node_path(&bundled, bundled.is_file())
+fn node_binary_name(os: &str) -> &'static str {
+    if os == "windows" { "node.exe" } else { "node" }
 }
 
-fn node_path(bundled: &Path, exists: bool) -> PathBuf {
+fn node_path(resource_dir: &Path, exists: bool, os: &str) -> PathBuf {
+    let bundled = resource_dir.join(node_binary_name(os));
     if exists {
-        bundled.to_path_buf()
+        bundled
     } else {
         PathBuf::from("node")
     }
+}
+
+fn node_executable(resource_dir: &Path, os: &str) -> PathBuf {
+    let bundled = resource_dir.join(node_binary_name(os));
+    node_path(resource_dir, bundled.is_file(), os)
+}
+
+fn shortcut_label(os: &str) -> &'static str {
+    if os == "macos" { "Control+Option+O" } else { "Ctrl+Alt+O" }
+}
+
+fn startup_label(os: &str) -> &'static str {
+    if os == "macos" { "macOS 로그인 시 실행" } else { "Windows 시작 시 실행" }
 }
 
 fn choose_port() -> Result<u16, String> {
@@ -170,7 +183,7 @@ fn ensure_server(app: &AppHandle<Wry>) -> Result<(Option<Child>, u16), String> {
             std::fs::create_dir_all(&config_dir).map_err(|error| error.to_string())?;
             let server_dir = configured_server_dir(app);
             let resources = app.path().resource_dir().unwrap_or_default();
-            let node = node_executable(&resources);
+            let node = node_executable(&resources, std::env::consts::OS);
             let mut child = spawn_server(&server_dir, &node, port, &config_dir)
                 .map_err(|error| format!("Could not start Agent Office server: {error}"))?;
             let deadline = Instant::now() + Duration::from_secs(8);
@@ -280,7 +293,7 @@ fn tray(
     let passthrough = CheckMenuItem::with_id(
         app,
         "mouse-passthrough",
-        "마우스 통과 (켜기·끄기: Ctrl+Alt+O)",
+        format!("마우스 통과 (켜기·끄기: {})", shortcut_label(std::env::consts::OS)),
         true,
         false,
         None::<&str>,
@@ -289,7 +302,7 @@ fn tray(
     let startup = CheckMenuItem::with_id(
         app,
         "startup",
-        "Windows 시작 시 실행",
+        startup_label(std::env::consts::OS),
         true,
         startup_enabled,
         None::<&str>,
@@ -325,7 +338,7 @@ fn tray(
     let passthrough_state = cursor_state.clone();
     TrayIconBuilder::new()
         .menu(&menu)
-        .tooltip("Agent Office · Ctrl+Alt+O로 마우스 통과 켜기·끄기")
+        .tooltip(format!("Agent Office · {}로 마우스 통과 켜기·끄기", shortcut_label(std::env::consts::OS)))
         .on_menu_event(move |app, event| {
             let Some(window) = app.get_webview_window("main") else {
                 return;
@@ -533,6 +546,8 @@ fn main() {
         }))
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .setup(move |app| {
+            #[cfg(target_os = "macos")]
+            app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             let shortcut = Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyO);
             app.global_shortcut().register(shortcut)?;
             let (child, port) = ensure_server(app.handle()).map_err(std::io::Error::other)?;
@@ -569,8 +584,8 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::{
-        is_passthrough_hotkey, node_path, normalize_widget_settings, select_port,
-        server_action, ServerAction,
+        is_passthrough_hotkey, node_binary_name, node_path, normalize_widget_settings,
+        select_port, server_action, shortcut_label, startup_label, ServerAction,
     };
     use std::path::Path;
     use tauri_plugin_global_shortcut::{Code, Modifiers, Shortcut, ShortcutState};
@@ -587,14 +602,25 @@ mod tests {
 
     #[test]
     fn bundled_node_is_preferred_when_present() {
-        let bundled = Path::new("resources/node.exe");
-        assert_eq!(node_path(bundled, true), bundled);
+        let resources = Path::new("resources");
+        assert_eq!(node_path(resources, true, "windows"), Path::new("resources/node.exe"));
+        assert_eq!(node_path(resources, true, "macos"), Path::new("resources/node"));
+        assert_eq!(node_binary_name("linux"), "node");
     }
 
     #[test]
     fn missing_bundled_node_falls_back_to_system_node() {
-        let bundled = Path::new("resources/node.exe");
-        assert_eq!(node_path(bundled, false), Path::new("node"));
+        let resources = Path::new("resources");
+        assert_eq!(node_path(resources, false, "windows"), Path::new("node"));
+        assert_eq!(node_path(resources, false, "macos"), Path::new("node"));
+    }
+
+    #[test]
+    fn platform_shortcut_and_startup_labels_are_selected() {
+        assert_eq!(shortcut_label("macos"), "Control+Option+O");
+        assert_eq!(shortcut_label("windows"), "Ctrl+Alt+O");
+        assert_eq!(startup_label("macos"), "macOS 로그인 시 실행");
+        assert_eq!(startup_label("windows"), "Windows 시작 시 실행");
     }
 
     #[test]

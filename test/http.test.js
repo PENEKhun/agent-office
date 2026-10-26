@@ -110,7 +110,8 @@ test('connection check reports source availability and accepts a selected local 
     connectivity: () => ({ sources: {
       'claude-code': { folder: true, recent: false, lastEventAt: null },
       'claude-desktop': { folder: true, recent: true, lastEventAt: 1_797_000_000_000 },
-      codex: { folder: false, recent: false, lastEventAt: null }
+      codex: { folder: false, recent: false, lastEventAt: null },
+      opencode: { folder: false, recent: false, lastEventAt: null }
     } }),
     configureSource: async (source, path) => { selection = { source, path }; },
     resetSource: async (source) => { reset = source; }
@@ -122,7 +123,8 @@ test('connection check reports source availability and accepts a selected local 
     sources: {
       'claude-code': { folder: true, recent: false, lastEventAt: null },
       'claude-desktop': { folder: true, recent: true, lastEventAt: 1_797_000_000_000 },
-      codex: { folder: false, recent: false, lastEventAt: null }
+      codex: { folder: false, recent: false, lastEventAt: null },
+      opencode: { folder: false, recent: false, lastEventAt: null }
     }
   });
   const suggestion = await fetch(`${base}/api/sources`, {
@@ -137,6 +139,12 @@ test('connection check reports source availability and accepts a selected local 
   });
   assert.equal(response.status, 200);
   assert.deepEqual(selection, { source: 'codex', path: 'C:/Users/test/.codex/sessions' });
+  const opencodeResponse = await fetch(`${base}/api/sources`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ source: 'opencode', path: 'C:/Users/test/.local/share/opencode/opencode.db' })
+  });
+  assert.equal(opencodeResponse.status, 200);
+  assert.deepEqual(selection, { source: 'opencode', path: 'C:/Users/test/.local/share/opencode/opencode.db' });
   const resetResponse = await fetch(`${base}/api/sources`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ source: 'codex', reset: true })

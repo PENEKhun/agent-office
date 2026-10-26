@@ -4,6 +4,8 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 const ROOT_FILES = new Set([
   'server.js', 'config.example.json', 'package.json', 'CHANGELOG.md', 'LICENSE', 'NOTICE.md', 'README.md'
 ]);
+const PUBLIC_WORKFLOW = '.github/workflows/test.yml';
+const RELEASE_MAC_WORKFLOW = '.github/workflows/release-mac.yml';
 const SCRIPT_EXCLUDES = new Set([
   'scripts/make-release-notes.mjs', 'scripts/lib/release-data.mjs', 'scripts/export-public.mjs'
 ]);
@@ -19,7 +21,8 @@ export function normalizePublicPath(value) {
 export function isAllowedPublicPath(value) {
   const path = normalizePublicPath(value);
   if (!path) return false;
-  if (ROOT_FILES.has(path) || path === 'docs' || path === 'docs/images' || path === 'docs/SPEC.md' || path === 'docs/INSTALL.md' || IMAGE_FILES.has(path)) return true;
+  if (ROOT_FILES.has(path) || path === '.github' || path === '.github/workflows' || path === PUBLIC_WORKFLOW || path === RELEASE_MAC_WORKFLOW ||
+    path === 'docs' || path === 'docs/images' || path === 'docs/SPEC.md' || path === 'docs/INSTALL.md' || IMAGE_FILES.has(path)) return true;
   if (path === 'src' || path.startsWith('src/')) return true;
   if (path === 'test' || path.startsWith('test/')) return true;
   if (path === 'public' || path.startsWith('public/')) return true;
@@ -35,6 +38,50 @@ export function findDeniedStrings(text, denyValues) {
   const lowerText = text.toLocaleLowerCase('en-US');
   return [...new Set(denyValues.filter((value) => typeof value === 'string' && value.trim())
     .map((value) => value.trim()).filter((value) => lowerText.includes(value.toLocaleLowerCase('en-US'))))];
+}
+
+export function planPublicSync(previousFiles, currentFiles) {
+  const current = [...new Set(currentFiles.map(normalizePublicPath).filter(Boolean))].sort();
+  const previous = [...new Set(previousFiles.map(normalizePublicPath).filter(Boolean))];
+  const currentSet = new Set(current);
+  return {
+    copy: current,
+    delete: previous.filter((path) => !currentSet.has(path)).sort()
+  };
+}
+
+export function isPreviouslyManagedPublicPath(value) {
+  const path = normalizePublicPath(value);
+  if (!path) return false;
+  if (ROOT_FILES.has(path) || path === PUBLIC_WORKFLOW || path === RELEASE_MAC_WORKFLOW || IMAGE_FILES.has(path) ||
+    path === 'docs/SPEC.md' || path === 'docs/INSTALL.md') return true;
+  if (path === 'src' || path.startsWith('src/') || path === 'test' || path.startsWith('test/') ||
+    path === 'public' || path.startsWith('public/')) return true;
+  if (path === 'desktop' || path.startsWith('desktop/')) return !path.split('/').some((part) => part === 'target' || part === 'gen');
+  if (path === 'scripts' || path.startsWith('scripts/')) return !SCRIPT_EXCLUDES.has(path);
+  return false;
+}
+
+export function shouldRejectOrigin(origin, denyValues) {
+  return findDeniedStrings(origin, denyValues).length > 0;
+}
+
+export function isGitWorktree(path, gitEntryType) {
+  return Boolean(path) && (gitEntryType === 'directory' || gitEntryType === 'file');
+}
+
+export function listPublicFiles(root) {
+  const files = [];
+  const visit = (directory, prefix = '') => {
+    for (const entry of readdirSync(join(root, prefix), { withFileTypes: true })) {
+      const relativePath = [prefix, entry.name].filter(Boolean).join('/');
+      if (!isAllowedPublicPath(relativePath) || entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) visit(root, relativePath);
+      else if (entry.isFile()) files.push(relativePath);
+    }
+  };
+  visit(root);
+  return files.sort();
 }
 
 function copyDirectory(sourceRoot, outputRoot, relativeDirectory) {

@@ -1,7 +1,7 @@
-import { homedir } from 'node:os';
-import { basename, join, relative, sep } from 'node:path';
+import { basename } from 'node:path';
 import { validateEvent } from '../core/events.js';
 import { toolRoom } from './claude-code.js';
+import { coworkInboxRoot, isPathInside, relativePath } from '../lib/platform-roots.js';
 
 // Cowork(클라우드에서 도는 Claude)는 PC에 로그를 남기지 않는다.
 // 대신 세션이 직접 상태 한 줄씩을 인박스 파일에 적고, 이 어댑터가 그 줄을 읽는다.
@@ -10,12 +10,10 @@ import { toolRoom } from './claude-code.js';
 
 const KINDS = new Set(['session_start', 'session_end', 'turn_start', 'turn_end', 'thinking', 'tool_start', 'tool_end', 'message']);
 const TOOL_NAME = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
-const SESSION_FILE = /^[A-Za-z0-9_-]{1,64}\.jsonl$/;
+const SESSION_FILE = /^[A-Za-z0-9_-]{1,64}\.jsonl$/iu;
 
-export function inboxRoot(env = process.env) {
-  if (env.AGENT_OFFICE_INBOX) return env.AGENT_OFFICE_INBOX;
-  if (env.LOCALAPPDATA) return join(env.LOCALAPPDATA, 'AgentOffice', 'inbox');
-  return join(homedir(), '.agent-office', 'inbox');
+export function inboxRoot(env = process.env, options = {}) {
+  return coworkInboxRoot({ ...options, env });
 }
 
 // mcp__서버__도구 같은 이름은 서버 이름이 드러나지 않게 mcp로 줄인다
@@ -33,7 +31,9 @@ function roomFor(kind, tool) {
   return toolRoom(tool, '');
 }
 
-export function createCoworkAdapter({ roots = () => [inboxRoot()], now = Date.now } = {}) {
+export function createCoworkAdapter({ roots = null, now = Date.now, platform = process.platform,
+  home = undefined, env = process.env } = {}) {
+  roots ??= () => [inboxRoot(env, { platform, home })];
   function createSession(filePath) {
     const sessionId = `cowork-${basename(filePath, '.jsonl')}`;
     return { sessionId, project: null, ignoredCount: 0, unknownCount: 0 };
@@ -85,8 +85,8 @@ export function createCoworkAdapter({ roots = () => [inboxRoot()], now = Date.no
     match(filePath, configuredRoot = null) {
       if (!SESSION_FILE.test(basename(filePath))) return false;
       return [configuredRoot, ...roots()].filter(Boolean).some((root) => {
-        const relativePath = relative(root, filePath);
-        return relativePath !== '' && relativePath !== '..' && !relativePath.startsWith(`..${sep}`) && !relativePath.includes(sep);
+        if (!isPathInside(root, filePath, platform)) return false;
+        return !relativePath(root, filePath, platform).replaceAll('\\', '/').includes('/');
       });
     },
     createSession,

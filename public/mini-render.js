@@ -1,7 +1,7 @@
 import { ACTIVITIES, activityOf } from './office-activity.js';
 import { sourceLabel, statusLabel } from './labels.js';
 
-const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic' };
+const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic', opencode: 'opencode' };
 const GLYPHS = {
   read: '<path d="M3 8l8 2v10l-8-2zm22 0l-8 2v10l8-2z"/>',
   code: '<path d="M10 8l-5 6 5 6m8-12l5 6-5 6m-1-16l-5 20"/>',

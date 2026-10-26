@@ -1,9 +1,9 @@
 import { homedir } from 'node:os';
-import { basename, join, relative, sep } from 'node:path';
+import { basename } from 'node:path';
 import { detectGitAction, isSearchCommand } from '../lib/git-detect.js';
 import { redactCommand, redactFilePath, redactMcpName } from '../lib/redact.js';
 import { validateEvent } from '../core/events.js';
-import { wslHomes } from '../lib/windows-roots.js';
+import { codexRoots as findCodexRoots, isPathInside, normalizeProjectPath } from '../lib/platform-roots.js';
 
 const SHELLS = new Set([
   'bash', 'sh', 'zsh', 'powershell', 'powershell.exe', 'pwsh', 'pwsh.exe', 'cmd', 'cmd.exe'
@@ -13,21 +13,6 @@ const IGNORED_ROW_TYPES = new Set([
   'response_item', 'token_count', 'token_usage_record', 'turn_context', 'world_state', 'compacted'
 ]);
 const IGNORED_EVENT_TYPES = new Set(['token_count', 'thread_settings_applied', 'turn_aborted']);
-
-function sessionsRoot() {
-  return join(process.env.CODEX_HOME || join(homedir(), '.codex'), 'sessions');
-}
-
-function defaultRoots() {
-  return [sessionsRoot(), ...wslHomes().map((home) => join(home, '.codex', 'sessions'))];
-}
-
-function normalizeProject(value) {
-  if (typeof value !== 'string' || !/^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)/.test(value)) {
-    return null;
-  }
-  return value.replaceAll('\\', '/').replace(/^([A-Z]):/, (_, drive) => `${drive.toLowerCase()}:`);
-}
 
 function eventTimestamp(value, fallback) {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -194,7 +179,9 @@ function parseCompletedItem(session, item, payload, ts) {
 }
 
 /** Codex rollout JSONL 어댑터 생성 */
-export function createCodexAdapter({ roots = defaultRoots, now = Date.now } = {}) {
+export function createCodexAdapter({ roots = null, now = Date.now, platform = process.platform,
+  home = homedir(), env = process.env } = {}) {
+  roots ??= () => findCodexRoots({ platform, home, env });
   function createSession(filePath) {
     const filename = basename(filePath, '.jsonl');
     const sessionId = filename.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)?.[0] ?? filename;
@@ -213,7 +200,7 @@ export function createCodexAdapter({ roots = defaultRoots, now = Date.now } = {}
     try {
       const row = JSON.parse(firstLine);
       if (row?.type === 'session_meta' && row.payload && typeof row.payload === 'object') {
-        session.project = normalizeProject(row.payload.cwd);
+        session.project = normalizeProjectPath(row.payload.cwd);
       }
     } catch {
       session.unknownCount += 1;
@@ -236,7 +223,7 @@ export function createCodexAdapter({ roots = defaultRoots, now = Date.now } = {}
       }
 
       if (row.type === 'session_meta') {
-        session.project = normalizeProject(payload.cwd);
+        session.project = normalizeProjectPath(payload.cwd);
         const start = makeEvent(session, 'session_start', ts);
         return start ? [start] : [];
       }
@@ -270,13 +257,10 @@ export function createCodexAdapter({ roots = defaultRoots, now = Date.now } = {}
     id: 'codex',
     roots,
     match(filePath, configuredRoot = null) {
-      if (!filePath.endsWith('.jsonl') || !basename(filePath).startsWith('rollout-')) {
+      if (!filePath.toLowerCase().endsWith('.jsonl') || !basename(filePath).toLowerCase().startsWith('rollout-')) {
         return false;
       }
-      return [configuredRoot, ...roots()].filter(Boolean).some((root) => {
-        const relativePath = relative(root, filePath);
-        return relativePath !== '' && relativePath !== '..' && !relativePath.startsWith(`..${sep}`);
-      });
+      return [configuredRoot, ...roots()].filter(Boolean).some((root) => isPathInside(root, filePath, platform));
     },
     createSession,
     primeSession,

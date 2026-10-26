@@ -1,6 +1,6 @@
 [package]
 name = "agent-office-desktop"
-version = "0.4.1"
+version = "0.5.0"
 description = "Agent Office transparent desktop widget"
 authors = ["Agent Office"]
 edition = "2021"
@@ -10,7 +10,7 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 serde_json = "1"
-tauri = { version = "2", features = ["tray-icon"] }
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
 tauri-plugin-single-instance = "2"
 tauri-plugin-window-state = "2"
 tauri-plugin-global-shortcut = "2"

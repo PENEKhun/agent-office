@@ -1,8 +1,8 @@
 import { activityLabel, agentLabel, roomLabel, sourceLabel, statusLabel } from '/labels.js';
 import { getTheme } from '/themes/index.js';
 
-const COLORS = { 'claude-code': '#D97757', 'claude-desktop': '#C2410C', codex: '#10A37F', antigravity: '#4285F4', cowork: '#7C5CDB' };
-const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic' };
+const COLORS = { 'claude-code': '#D97757', 'claude-desktop': '#C2410C', codex: '#10A37F', antigravity: '#4285F4', cowork: '#7C5CDB', opencode: '#C64D85' };
+const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic', opencode: 'opencode' };
 
 function appendFloor(nav, floor, selectedProject, onSelect) {
   const button = document.createElement('button');

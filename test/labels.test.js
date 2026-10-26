@@ -6,6 +6,7 @@ test('labels translate sources, rooms, and statuses to Korean', () => {
   assert.equal(sourceLabel('codex'), 'Codex');
   assert.equal(sourceLabel('claude-code'), 'Claude Code');
   assert.equal(sourceLabel('claude-desktop'), 'Claude Desktop');
+  assert.equal(sourceLabel('opencode'), 'opencode');
   assert.equal(roomLabel('library'), '자료실');
   assert.equal(roomLabel('desk'), '응답 데스크');
   assert.equal(statusLabel('thinking'), '고민 중');

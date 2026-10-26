@@ -9,7 +9,7 @@ import { validateEvent } from '../src/core/events.js';
 
 test('adapter index loads the Claude Code adapter automatically', async () => {
   const adapters = await loadAdapters();
-  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork']);
+  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork', 'opencode']);
 });
 
 test('parses a redacted local-agent-mode fixture without exposing source text', async () => {
@@ -103,9 +103,9 @@ test('keeps side-agent IDs distinct when transcript session IDs equal the parent
     });
     return adapter.parseLine(session, line)[0];
   };
-  const first = createSidechainEvent('C:\\project\\subagents\\agent-one.jsonl');
-  const second = createSidechainEvent('C:\\project\\subagents\\agent-two.jsonl');
-  const explicit = createSidechainEvent('C:\\project\\subagents\\agent-three.jsonl', 'custom-agent-id');
+  const first = createSidechainEvent(join('project', 'subagents', 'agent-one.jsonl'));
+  const second = createSidechainEvent(join('project', 'subagents', 'agent-two.jsonl'));
+  const explicit = createSidechainEvent(join('project', 'subagents', 'agent-three.jsonl'), 'custom-agent-id');
 
   assert.equal(first.agentId, 'agent-one');
   assert.equal(second.agentId, 'agent-two');
@@ -114,8 +114,8 @@ test('keeps side-agent IDs distinct when transcript session IDs equal the parent
   assert.equal(explicit.agentId, 'custom-agent-id');
 });
 
-test('uses Claude Desktop source and clears non-PC cwd paths', () => {
-  const root = 'C:\\appdata\\Claude\\local-agent-mode-sessions';
+test('uses Claude Desktop source and clears relative cwd paths', () => {
+  const root = join('appdata', 'Claude', 'local-agent-mode-sessions');
   const adapter = createClaudeCodeAdapter({
     now: () => 1000,
     roots: () => [root],
@@ -126,7 +126,7 @@ test('uses Claude Desktop source and clears non-PC cwd paths', () => {
     type: 'assistant',
     timestamp: '2026-01-01T00:00:00Z',
     sessionId: '<redacted>',
-    cwd: '/sessions/<redacted>',
+    cwd: 'sessions/<redacted>',
     message: { content: [{ type: 'thinking', thinking: '<redacted>' }] }
   });
   const [event] = adapter.parseLine(session, line);
@@ -136,7 +136,7 @@ test('uses Claude Desktop source and clears non-PC cwd paths', () => {
 
 function parsedSource(entrypoint, sourceConfig = {}) {
   const adapter = createClaudeCodeAdapter({ now: () => 1000, roots: () => [] });
-  const session = adapter.createSession('C:\\Users\\person\\.claude\\projects\\session.jsonl', null, sourceConfig);
+  const session = adapter.createSession(join('Users', 'person', '.claude', 'projects', 'session.jsonl'), null, sourceConfig);
   const row = {
     type: 'assistant',
     timestamp: '2026-01-01T00:00:00Z',

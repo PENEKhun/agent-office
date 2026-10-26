@@ -1,4 +1,4 @@
-const SOURCES = new Set(['claude-code', 'codex', 'antigravity', 'claude-desktop', 'cowork']);
+const SOURCES = new Set(['claude-code', 'codex', 'antigravity', 'claude-desktop', 'cowork', 'opencode']);
 const KINDS = new Set([
   'session_start',
   'session_end',

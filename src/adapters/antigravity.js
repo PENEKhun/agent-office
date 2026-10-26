@@ -1,23 +1,16 @@
 import { readdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { basename, dirname, join, relative, sep } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import { detectGitAction, isSearchCommand } from '../lib/git-detect.js';
 import { redactCommand, redactFilePath, redactMcpName } from '../lib/redact.js';
 import { validateEvent } from '../core/events.js';
-import { wslHomes } from '../lib/windows-roots.js';
+import { antigravityRoot, antigravityRoots, isPathInside, normalizeProjectPath, relativePath } from '../lib/platform-roots.js';
 
 const DATABASE_INTERVAL_MS = 10000;
 const SKIPPED_BRAIN_DIRS = new Set(['scratch', '.user_uploaded', '.tempmediaStorage']);
 const IGNORED_ROW_TYPES = new Set(['SYSTEM_MESSAGE', 'CHECKPOINT', 'ERROR_MESSAGE']);
-
-function normalizeProject(value) {
-  if (typeof value !== 'string' || !/^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)/.test(value)) {
-    return null;
-  }
-  return value.replaceAll('\\', '/').replace(/^([A-Z]):/, (_, drive) => `${drive.toLowerCase()}:`);
-}
 
 function workspaceProject(value) {
   if (typeof value !== 'string' || !value) {
@@ -37,7 +30,7 @@ function workspaceProject(value) {
     }
     try {
       const path = uri.startsWith('file:') ? fileURLToPath(new URL(uri)) : uri;
-      const normalized = normalizeProject(path);
+      const normalized = normalizeProjectPath(path);
       if (normalized) {
         return normalized;
       }
@@ -100,13 +93,14 @@ function toolRoom(name, args) {
 /** Antigravity 로그와 세션 메타데이터 어댑터 생성 */
 export function createAntigravityAdapter({
   home = homedir(),
+  platform = process.platform,
   now = Date.now,
   databaseFactory = (path) => new DatabaseSync(path, { readOnly: true }),
   readDirectory = readdir
 } = {}) {
-  const root = join(home, '.gemini', 'antigravity');
-  const brainRoot = join(root, 'brain');
-  const brainRoots = [brainRoot, ...wslHomes().map((wslHome) => join(wslHome, '.gemini', 'antigravity', 'brain'))];
+  const root = antigravityRoot({ platform, home });
+  const brainRoots = antigravityRoots({ platform, home });
+  const brainRoot = brainRoots[0];
   const databasePath = join(root, 'conversation_summaries.db');
   const presencePath = join(root, 'presence');
   const metadata = new Map();
@@ -115,11 +109,9 @@ export function createAntigravityAdapter({
 
   function createSession(filePath, configuredRoot = null) {
     const matchedRoot = [configuredRoot, ...brainRoots].filter(Boolean).find((candidate) => {
-      const relativePath = relative(candidate, filePath);
-      return relativePath !== '..' && !relativePath.startsWith(`..${sep}`);
+      return isPathInside(candidate, filePath, platform);
     });
-    const relativePath = relative(matchedRoot ?? brainRoot, filePath);
-    const relativeSession = relativePath.split(sep)[0];
+    const relativeSession = relativePath(matchedRoot ?? brainRoot, filePath, platform).replaceAll('\\', '/').split('/')[0];
     const sessionId = relativeSession && relativeSession !== '..'
       ? relativeSession : basename(dirname(dirname(dirname(filePath))));
     return {
@@ -325,12 +317,12 @@ export function createAntigravityAdapter({
     roots: () => brainRoots,
     match(filePath, configuredRoot = null) {
       const roots = configuredRoot ? [configuredRoot, ...brainRoots] : brainRoots;
-      const relativePath = roots.map((candidate) => relative(candidate, filePath))
-        .find((candidate) => candidate !== '..' && !candidate.startsWith(`..${sep}`));
-      if (!relativePath) return false;
-      const parts = relativePath.split(sep);
-      return basename(filePath) === 'transcript.jsonl' && parts.length >= 4 &&
-        parts.at(-3) === '.system_generated' && parts.at(-2) === 'logs';
+      const matchedRoot = roots.find((candidate) => isPathInside(candidate, filePath, platform));
+      const pathInside = matchedRoot ? relativePath(matchedRoot, filePath, platform).replaceAll('\\', '/') : null;
+      const relativeParts = pathInside?.split('/') ?? [];
+      if (!pathInside) return false;
+      return basename(filePath).toLowerCase() === 'transcript.jsonl' && relativeParts.length >= 4 &&
+        relativeParts.at(-3) === '.system_generated' && relativeParts.at(-2) === 'logs';
     },
     // 대화 폴더마다 steps·messages·tasks 아래 하위 폴더가 수백 개라 transcript가 있는 logs로만 내려간다
     descend(dirPath) {

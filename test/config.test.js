@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { win32 } from 'node:path';
 import { addSourcePath, normalizeConfig, resetSourcePath, suggestSourcePath } from '../src/server/config.js';
 
 test('legacy sleep timeout becomes the total inactivity leave timeout', () => {
@@ -31,13 +32,18 @@ test('a configured path adds to source settings and reset removes only path and 
 });
 
 test('suggests Claude and Codex log subfolders without changing other paths', () => {
-  assert.equal(suggestSourcePath('claude-code', 'C:\\Users\\person\\.claude'), 'C:\\Users\\person\\.claude\\projects');
-  assert.equal(suggestSourcePath('claude-desktop', 'C:\\Users\\person\\.claude'), 'C:\\Users\\person\\.claude\\projects');
-  assert.equal(suggestSourcePath('codex', 'C:\\Users\\person\\.codex'), 'C:\\Users\\person\\.codex\\sessions');
-  assert.equal(suggestSourcePath('codex', 'C:\\Users\\person\\.codex\\sessions'), null);
-  assert.equal(suggestSourcePath('antigravity', 'C:\\Users\\person\\.gemini'), 'C:\\Users\\person\\.gemini\\antigravity\\brain');
-  assert.equal(suggestSourcePath('antigravity', 'C:\\Users\\person\\.gemini\\antigravity'), 'C:\\Users\\person\\.gemini\\antigravity\\brain');
+  const claude = win32.join('C:', 'Users', 'person', '.claude');
+  const codex = win32.join('C:', 'Users', 'person', '.codex');
+  const gemini = win32.join('C:', 'Users', 'person', '.gemini');
+  assert.equal(suggestSourcePath('claude-code', claude), win32.join(claude, 'projects'));
+  assert.equal(suggestSourcePath('claude-desktop', claude), win32.join(claude, 'projects'));
+  assert.equal(suggestSourcePath('codex', codex), win32.join(codex, 'sessions'));
+  assert.equal(suggestSourcePath('codex', win32.join(codex, 'sessions')), null);
+  assert.equal(suggestSourcePath('antigravity', gemini), win32.join(gemini, 'antigravity', 'brain'));
+  assert.equal(suggestSourcePath('antigravity', win32.join(gemini, 'antigravity')), win32.join(gemini, 'antigravity', 'brain'));
   assert.equal(suggestSourcePath('antigravity', '/home/person/.gemini'), '/home/person/.gemini/antigravity/brain');
-  assert.equal(suggestSourcePath('antigravity', 'C:\\Users\\person\\.gemini\\antigravity\\brain'), null);
-  assert.equal(suggestSourcePath('antigravity', 'C:\\logs'), null);
+  assert.equal(suggestSourcePath('antigravity', win32.join(gemini, 'antigravity', 'brain')), null);
+  assert.equal(suggestSourcePath('opencode', win32.join('C:', 'Users', 'person', '.local')),
+    win32.join('C:', 'Users', 'person', '.local', 'share', 'opencode'));
+  assert.equal(suggestSourcePath('antigravity', win32.join('C:', 'logs')), null);
 });

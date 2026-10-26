@@ -3,7 +3,8 @@ const SOURCES = {
   'claude-desktop': 'Claude Desktop',
   codex: 'Codex',
   antigravity: 'Antigravity',
-  cowork: 'Claude Cowork'
+  cowork: 'Claude Cowork',
+  opencode: 'opencode'
 };
 
 import { ACTIVITIES, activityOf } from './office-activity.js';

@@ -1,20 +1,13 @@
-import { basename, dirname, extname, join, relative, sep } from 'node:path';
+import { basename, dirname, extname } from 'node:path';
 import { homedir } from 'node:os';
 import { detectGitAction, isSearchCommand } from '../lib/git-detect.js';
 import { redactCommand, redactFilePath, redactMcpName } from '../lib/redact.js';
 import { validateEvent } from '../core/events.js';
-import { wslHomes } from '../lib/windows-roots.js';
+import { claudeDesktopRoot, claudeRoots, isPathInside, normalizeProjectPath } from '../lib/platform-roots.js';
 
 const SKIPPED_DESKTOP_DIRS = new Set(['outputs', 'uploads', 'uploads-tmp']);
 const FILE_TOOLS = new Set(['Read', 'Grep', 'Glob', 'LS', 'NotebookRead']);
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit']);
-
-function normalizeProject(project) {
-  if (typeof project !== 'string' || !/^(?:[A-Za-z]:[\\/]|\\\\[^\\]+\\[^\\]+)/.test(project)) {
-    return null;
-  }
-  return project.replaceAll('\\', '/').replace(/^([A-Z]):/, (_, drive) => `${drive.toLowerCase()}:`);
-}
 
 function timestamp(value, now) {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -61,21 +54,17 @@ function toolDetail(tool, input) {
   return tool.slice(0, 40);
 }
 
-function projectRoot() {
-  return join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'projects');
-}
-
-function defaultRoots() {
-  return [projectRoot(), ...(process.env.APPDATA ? [join(process.env.APPDATA, 'Claude', 'local-agent-mode-sessions')] : []),
-    ...wslHomes().map((home) => join(home, '.claude', 'projects'))];
-}
-
 /** Claude Code 계열 JSONL 어댑터 생성 */
 export function createClaudeCodeAdapter({
   now = Date.now,
-  roots = defaultRoots,
-  desktopRoot = () => process.env.APPDATA ? join(process.env.APPDATA, 'Claude', 'local-agent-mode-sessions') : null
+  roots = null,
+  desktopRoot = null,
+  platform = process.platform,
+  home = homedir(),
+  env = process.env
 } = {}) {
+  roots ??= () => claudeRoots({ platform, home, env });
+  desktopRoot ??= () => claudeDesktopRoot({ platform, home, env });
   function createSession(filePath, _root = null, sourceConfig = {}) {
     const fileAgentId = basename(filePath, extname(filePath));
     const isSubagentFile = filePath.split(/[\\/]/).includes('subagents');
@@ -102,8 +91,7 @@ export function createClaudeCodeAdapter({
     if (!root) {
       return false;
     }
-    const relativePath = relative(root, filePath);
-    return relativePath !== '' && relativePath !== '..' && !relativePath.startsWith(`..${sep}`);
+    return isPathInside(root, filePath, platform);
   }
 
   function makeEvent(session, kind, ts, values = {}) {
@@ -149,7 +137,7 @@ export function createClaudeCodeAdapter({
         session.sessionId = row.sessionId;
       }
       if (typeof row.cwd === 'string') {
-        session.project = normalizeProject(row.cwd);
+        session.project = normalizeProjectPath(row.cwd);
       }
       session.isSidechain = session.isSubagentFile || row.isSidechain === true ||
         (typeof row.agentId === 'string' && row.agentId !== session.sessionId);
@@ -259,13 +247,10 @@ export function createClaudeCodeAdapter({
     id: 'claude-code',
     roots,
     match(filePath, configuredRoot = null) {
-      if (!filePath.endsWith('.jsonl')) {
+      if (!filePath.toLowerCase().endsWith('.jsonl')) {
         return false;
       }
-      return [configuredRoot, ...roots()].filter(Boolean).some((root) => {
-        const relativePath = relative(root, filePath);
-        return relativePath !== '' && !relativePath.startsWith(`..${sep}`) && relativePath !== '..';
-      });
+      return [configuredRoot, ...roots()].filter(Boolean).some((root) => isPathInside(root, filePath, platform));
     },
     // Desktop 세션 폴더의 업로드·산출물과 .claude 아래 스킬·플러그인에는 세션 로그가 없다
     descend(dirPath) {

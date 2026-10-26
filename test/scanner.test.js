@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, rm, writeFile, appendFile, utimes, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, join, win32 } from 'node:path';
 import { createScanner } from '../src/lib/scanner.js';
 
 test('restores recent lines, tails appended data, and honors source settings', async (context) => {
@@ -41,7 +41,8 @@ test('restores recent lines, tails appended data, and honors source settings', a
   assert.deepEqual((({ scan, ...rest }) => rest)(scanner.diagnostics()), {
     watchedFilesBySource: { sample: 1 },
     ignoredCountBySource: { sample: 1 },
-    unknownCountBySource: { sample: 1 }
+    unknownCountBySource: { sample: 1 },
+    databaseErrorCountBySource: {}
   });
   await appendFile(filePath, 'live-1\n');
   await scanner.pollOnce();
@@ -78,7 +79,7 @@ test('configured roots add to defaults and root folder stats stay cached across 
 
   await scanner.start();
   assert.equal(scanner.knownFiles.size, 2);
-  assert.deepEqual(scanner.connectivity().sample, { folder: true, recent: true });
+  assert.deepEqual(scanner.connectivity().sample, { folder: true, recent: true, lastEventAt: null });
   await scanner.discover();
   await scanner.discover();
   assert.equal(rootStats.get(root), 1);
@@ -92,7 +93,7 @@ test('primes Codex project from the first line even when restoring only the last
   const filePath = join(directory, 'rollout-123e4567-e89b-12d3-a456-426614174000.jsonl');
   const sessionMeta = JSON.stringify({
     type: 'session_meta',
-    payload: { id: 'different-redacted-id', cwd: 'C:\\Workspace\\Project' }
+    payload: { id: 'different-redacted-id', cwd: win32.join('C:', 'Workspace', 'Project') }
   });
   const largeLine = `${JSON.stringify({ type: 'entry', value: 'x'.repeat(20000) })}\n`;
   await writeFile(filePath, `${sessionMeta}\n${largeLine.repeat(110)}`);
@@ -242,6 +243,27 @@ test('polls adapter-level sources during startup and later cycles', async () => 
     { event: { kind: 'event-1' }, metadata: { restored: true } },
     { event: { kind: 'event-2' }, metadata: { restored: false } }
   ]);
+  scanner.stop();
+});
+
+test('poll-only adapters stat database files and receive configured paths without walking them', async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), 'agent-office-poll-root-'));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const databasePath = join(directory, 'opencode.db');
+  await writeFile(databasePath, 'synthetic database placeholder');
+  const polls = [];
+  const adapter = {
+    id: 'opencode', pollOnly: true, handlesConfiguredPath: true,
+    roots: (config) => [config.path ?? databasePath],
+    poll: (config) => { polls.push(config); return []; },
+    diagnostics: () => ({ ignoredCount: 0, unknownCount: 0, databaseErrorCount: 0 })
+  };
+  const scanner = createScanner({ adapters: [adapter], sources: { opencode: { path: databasePath } },
+    setIntervalFn: (_callback, delay) => delay, clearIntervalFn: () => {} });
+  await scanner.start();
+  assert.deepEqual(scanner.connectivity().opencode, { folder: true, recent: false, lastEventAt: null });
+  assert.deepEqual(polls, [{ path: databasePath }]);
+  assert.equal(scanner.knownFiles.size, 0);
   scanner.stop();
 });
 

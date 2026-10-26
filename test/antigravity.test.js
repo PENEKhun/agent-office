@@ -39,14 +39,14 @@ function createSummaryDatabase(home, rows = []) {
 
 test('adapter index discovers Antigravity alongside Claude adapters', async () => {
   const adapters = await loadAdapters();
-  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork']);
+  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork', 'opencode']);
 });
 
 test('parses multiple tool calls in FIFO order and ignores their raw values', async () => {
   const fixture = new URL('./fixtures/antigravity/multiple-tool-calls.jsonl', import.meta.url);
   const lines = (await readFile(fixture, 'utf8')).trim().split('\n');
-  const adapter = createAntigravityAdapter({ home: 'C:\\redacted-home', now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted-home\\.gemini\\antigravity\\brain\\conversation\\.system_generated\\logs\\transcript.jsonl');
+  const adapter = createAntigravityAdapter({ home: '/redacted-home', now: () => 1000 });
+  const session = adapter.createSession('/redacted-home/.gemini/antigravity/brain/conversation/.system_generated/logs/transcript.jsonl');
   const events = lines.flatMap((line) => adapter.parseLine(session, line));
 
   assert.deepEqual(events.map((event) => event.kind), [
@@ -63,8 +63,8 @@ test('parses multiple tool calls in FIFO order and ignores their raw values', as
 });
 
 test('maps command exit status and source fields without keeping output text', () => {
-  const adapter = createAntigravityAdapter({ home: 'C:\\redacted-home', now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted-home\\.gemini\\antigravity\\brain\\conversation\\.system_generated\\logs\\transcript.jsonl');
+  const adapter = createAntigravityAdapter({ home: '/redacted-home', now: () => 1000 });
+  const session = adapter.createSession('/redacted-home/.gemini/antigravity/brain/conversation/.system_generated/logs/transcript.jsonl');
   adapter.parseLine(session, JSON.stringify({
     type: 'PLANNER_RESPONSE',
     source: 'MODEL',
@@ -137,8 +137,8 @@ test('reads summary metadata read-only and starts from the transcript, ending wh
 });
 
 test('clears stale FIFO calls when a new user turn begins', () => {
-  const adapter = createAntigravityAdapter({ home: 'C:\\redacted-home', now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted-home\\.gemini\\antigravity\\brain\\conversation\\.system_generated\\logs\\transcript.jsonl');
+  const adapter = createAntigravityAdapter({ home: '/redacted-home', now: () => 1000 });
+  const session = adapter.createSession('/redacted-home/.gemini/antigravity/brain/conversation/.system_generated/logs/transcript.jsonl');
   adapter.parseLine(session, JSON.stringify({
     type: 'PLANNER_RESPONSE',
     created_at: 1,
@@ -165,8 +165,8 @@ test('clears stale FIFO calls when a new user turn begins', () => {
 });
 
 test('keeps FIFO calls when a new planner response arrives', () => {
-  const adapter = createAntigravityAdapter({ home: 'C:\\redacted-home', now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted-home\\.gemini\\antigravity\\brain\\conversation\\.system_generated\\logs\\transcript.jsonl');
+  const adapter = createAntigravityAdapter({ home: '/redacted-home', now: () => 1000 });
+  const session = adapter.createSession('/redacted-home/.gemini/antigravity/brain/conversation/.system_generated/logs/transcript.jsonl');
   adapter.parseLine(session, JSON.stringify({
     type: 'PLANNER_RESPONSE',
     created_at: 1,
@@ -192,8 +192,8 @@ test('keeps FIFO calls when a new planner response arrives', () => {
 
 test('emits git only for a successful queued git command without exposing the command', () => {
   for (const [exitCode, expectedGit] of [[0, 'commit'], [1, undefined]]) {
-    const adapter = createAntigravityAdapter({ home: 'C:\\redacted-home', now: () => 1000 });
-    const session = adapter.createSession('C:\\redacted-home\\.gemini\\antigravity\\brain\\conversation\\.system_generated\\logs\\transcript.jsonl');
+    const adapter = createAntigravityAdapter({ home: '/redacted-home', now: () => 1000 });
+    const session = adapter.createSession('/redacted-home/.gemini/antigravity/brain/conversation/.system_generated/logs/transcript.jsonl');
     adapter.parseLine(session, JSON.stringify({
       type: 'PLANNER_RESPONSE', created_at: 1,
       tool_calls: [{ name: 'run_command', args: { CommandLine: 'git commit -m <redacted>' } }]

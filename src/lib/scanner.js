@@ -1,6 +1,7 @@
 import { open, readdir, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createTail } from './tail.js';
+import { isNetworkPath } from './platform-roots.js';
 
 const RESTORE_WINDOW_MS = 2 * 60 * 60 * 1000;
 const RESTORE_LINE_LIMIT = 500;
@@ -70,20 +71,21 @@ export function createScanner({
   const skippedFiles = new Map();
   const rootStatCache = new Map();
   const rootsBySource = new Map();
+  const lastEventAtBySource = new Map();
   let pollTimer = null;
   let rescanTimer = null;
   let polling = false;
   const running = { local: null, remote: null };
   const scan = { currentRoot: null, lastLocalMs: null, lastRemoteMs: null };
 
-  async function rootExists(root) {
+  async function rootExists(root, allowFile = false) {
     const path = resolve(root);
     const cached = rootStatCache.get(path);
     if (cached && now() - cached.checkedAt < ROOT_STAT_CACHE_MS) return cached.exists;
     let exists = false;
     try {
       const info = await statFile(path);
-      exists = typeof info.isDirectory === 'function' ? info.isDirectory() : true;
+      exists = allowFile || typeof info.isDirectory !== 'function' ? true : info.isDirectory();
     } catch {
       exists = false;
     }
@@ -93,15 +95,25 @@ export function createScanner({
 
   function rootsFor(adapter, sourceConfig) {
     let defaults = [];
-    try { defaults = adapter.roots(); } catch { /* 기본 경로를 읽지 못한 출처는 지정 경로만 사용 */ }
-    const roots = [...defaults, ...(typeof sourceConfig.path === 'string' && sourceConfig.path.trim() ? [sourceConfig.path] : [])];
+    try { defaults = adapter.roots(sourceConfig); } catch { /* 기본 경로를 읽지 못한 출처는 지정 경로만 사용 */ }
+    const configured = adapter.handlesConfiguredPath ? []
+      : (typeof sourceConfig.path === 'string' && sourceConfig.path.trim() ? [sourceConfig.path] : []);
+    const roots = [...defaults, ...configured];
     return [...new Set(roots.map((root) => resolve(root)))];
+  }
+
+  function emit(event, metadata) {
+    if (Number.isFinite(event?.ts)) {
+      const source = event.source;
+      lastEventAtBySource.set(source, Math.max(lastEventAtBySource.get(source) ?? 0, event.ts));
+    }
+    onEvent(event, metadata);
   }
 
   // WSL(\\wsl.localhost) 같은 네트워크 경로는 느리거나 멈출 수 있어 로컬 경로와 따로 돈다.
   // 한쪽이 오래 걸려도 다른 출처의 발견과 폴링이 막히지 않는다.
   function isRemote(root) {
-    return /^[\\/]{2}/.test(String(root));
+    return isNetworkPath(String(root));
   }
 
   function discover({ initial = false, remote = 'all' } = {}) {
@@ -130,7 +142,8 @@ export function createScanner({
       for (const root of roots) {
         if (isRemote(root) !== (lane === 'remote')) continue;
         if (lane === 'local') scan.currentRoot = root;
-        await rootExists(root);
+        await rootExists(root, adapter.pollOnly === true);
+        if (adapter.pollOnly) continue;
         const descend = typeof adapter.descend === 'function'
           ? (dirPath) => { try { return adapter.descend(dirPath, root) !== false; } catch { return true; } }
           : undefined;
@@ -164,7 +177,7 @@ export function createScanner({
               const lines = await tail.readInitialLines(filePath, RESTORE_LINE_LIMIT);
               for (const line of lines) {
                 for (const event of adapter.parseLine(session, line)) {
-                  onEvent(event, { restored });
+                  emit(event, { restored });
                 }
               }
             }
@@ -186,7 +199,7 @@ export function createScanner({
         try {
           for (const line of await tail.readNewLines(filePath)) {
             for (const event of entry.adapter.parseLine(entry.session, line)) {
-              onEvent(event, { restored: false });
+              emit(event, { restored: false });
             }
           }
         } catch {
@@ -204,9 +217,10 @@ export function createScanner({
       if (typeof adapter.poll !== 'function') {
         continue;
       }
+      if (sourceOverrides[adapter.id]?.enabled === false) continue;
       try {
-        for (const event of await adapter.poll()) {
-          onEvent(event, { restored });
+        for (const event of await adapter.poll(sourceOverrides[adapter.id] ?? {})) {
+          emit(event, { restored });
         }
       } catch {
         // SQLite 접근 실패 등 보조 소스 오류는 다음 폴링에서 다시 확인
@@ -238,22 +252,35 @@ export function createScanner({
     const watchedFilesBySource = {};
     const ignoredCountBySource = {};
     const unknownCountBySource = {};
+    const databaseErrorCountBySource = {};
     for (const { adapter, session } of knownFiles.values()) {
       const source = session.source ?? adapter.id;
       watchedFilesBySource[source] = (watchedFilesBySource[source] ?? 0) + 1;
       ignoredCountBySource[source] = (ignoredCountBySource[source] ?? 0) + (session.ignoredCount ?? 0);
       unknownCountBySource[source] = (unknownCountBySource[source] ?? 0) + (session.unknownCount ?? 0);
     }
-    return { watchedFilesBySource, ignoredCountBySource, unknownCountBySource,
+    for (const adapter of adapters) {
+      if (typeof adapter.diagnostics !== 'function') continue;
+      const counts = adapter.diagnostics();
+      ignoredCountBySource[adapter.id] = (ignoredCountBySource[adapter.id] ?? 0) + (counts.ignoredCount ?? 0);
+      unknownCountBySource[adapter.id] = (unknownCountBySource[adapter.id] ?? 0) + (counts.unknownCount ?? 0);
+      databaseErrorCountBySource[adapter.id] = counts.databaseErrorCount ?? 0;
+    }
+    return { watchedFilesBySource, ignoredCountBySource, unknownCountBySource, databaseErrorCountBySource,
       scan: { ...scan, localRunning: Boolean(running.local), remoteRunning: Boolean(running.remote) } };
   }
 
   function connectivity() {
     const { watchedFilesBySource } = diagnostics();
-    return Object.fromEntries([...rootsBySource].map(([source, roots]) => [source, {
-      folder: roots.some((root) => rootStatCache.get(root)?.exists === true),
-      recent: (watchedFilesBySource[source] ?? 0) > 0
-    }]));
+    return Object.fromEntries([...rootsBySource].map(([source, roots]) => {
+      const adapter = adapters.find((entry) => entry.id === source);
+      const dynamic = typeof adapter?.connectivity === 'function' ? adapter.connectivity(now()) : {};
+      return [source, {
+        folder: roots.some((root) => rootStatCache.get(root)?.exists === true),
+        recent: dynamic.recent ?? ((watchedFilesBySource[source] ?? 0) > 0),
+        lastEventAt: dynamic.lastEventAt ?? lastEventAtBySource.get(source) ?? null
+      }];
+    }));
   }
 
   async function configureSource(source, path, options = {}) {

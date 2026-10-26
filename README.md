@@ -1,6 +1,6 @@
 # Agent Office
 
-Agent Office reads local AI-agent session records and turns their activity into characters moving through an isometric office. It is an unofficial, local-first dashboard for Windows.
+Agent Office reads local AI-agent session records and turns their activity into characters moving through an isometric office. The local web dashboard is designed to run on Windows, macOS, and Linux; the Windows desktop bundle is supported, while the macOS bundle remains in testing and unverified.
 
 ![Office theme](docs/images/office.png)
 
@@ -10,7 +10,7 @@ Agent Office reads local AI-agent session records and turns their activity into 
 
 ## Run it
 
-Windows release builds are available as an installer or portable archive on the Releases page. To run the web dashboard from source, install Node.js 24 or newer, then run:
+Windows release builds are available as an installer or portable archive on the Releases page. macOS desktop builds are in testing and have not been verified. To run the web dashboard from source, install Node.js 24 or newer, then run:
 
 ```powershell
 node --version
@@ -22,29 +22,44 @@ No `npm install` step is needed. For demo data, use `npm run dev`; add `-- --cro
 
 ## Supported agents and local records
 
-| Agent | Default record location | Notes |
-|---|---|---|
-| Claude Code | `%USERPROFILE%\.claude\projects\<project>\*.jsonl` | Session transcripts |
-| Claude Desktop | `%USERPROFILE%\.claude\projects\...` | Code-tab sessions share the Claude Code location; legacy local agent-mode records under `%APPDATA%\Claude\local-agent-mode-sessions\` are also supported |
-| Codex | `%CODEX_HOME%\sessions\YYYY\MM\DD\rollout-*.jsonl` | Defaults to `%USERPROFILE%\.codex\sessions\` |
-| Antigravity | `%USERPROFILE%\.gemini\antigravity\brain\<conversation>\.system_generated\logs\transcript.jsonl` | Transcript records |
-| Claude Cowork inbox | `%LOCALAPPDATA%\AgentOffice\inbox\*.jsonl` | Local status reports from the optional inbox adapter |
+| Agent | Windows | macOS | Linux | Notes |
+|---|---|---|---|---|
+| Claude Code | `%USERPROFILE%\.claude\projects\<project>\*.jsonl` | `~/.claude/projects/<project>/*.jsonl` (estimated) | `~/.claude/projects/<project>/*.jsonl` (estimated) | `CLAUDE_CONFIG_DIR` overrides the `.claude` directory |
+| Claude Desktop | Code tab: Claude Code path; legacy: `%APPDATA%\Claude\local-agent-mode-sessions` | Code tab: Claude Code path; legacy: `~/Library/Application Support/Claude/local-agent-mode-sessions` (estimated) | Code tab: Claude Code path; legacy: `~/.config/Claude/local-agent-mode-sessions` (estimated) | Code-tab sessions share Claude Code records |
+| Codex | `%CODEX_HOME%\sessions\YYYY\MM\DD\rollout-*.jsonl` or `%USERPROFILE%\.codex\sessions` | `$CODEX_HOME/sessions/...` or `~/.codex/sessions/...` (estimated) | `$CODEX_HOME/sessions/...` or `~/.codex/sessions/...` (estimated) | `CODEX_HOME` overrides the `.codex` directory |
+| Antigravity | `%USERPROFILE%\.gemini\antigravity\brain\<conversation>\.system_generated\logs\transcript.jsonl` | `~/.gemini/antigravity/brain/<conversation>/.system_generated/logs/transcript.jsonl` (estimated) | `~/.gemini/antigravity/brain/<conversation>/.system_generated/logs/transcript.jsonl` (estimated) | Transcript records |
+| OpenCode | `%XDG_DATA_HOME%\opencode\opencode.db` or `%USERPROFILE%\.local\share\opencode\opencode.db` | `$XDG_DATA_HOME/opencode/opencode.db` or `~/.local/share/opencode/opencode.db` (estimated) | `$XDG_DATA_HOME/opencode/opencode.db` or `~/.local/share/opencode/opencode.db` (estimated) | SQLite records; `XDG_DATA_HOME` overrides the data directory |
+| Claude Cowork inbox | `%LOCALAPPDATA%\AgentOffice\inbox\*.jsonl` | `~/Library/Application Support/AgentOffice/inbox/*.jsonl` (estimated) | `~/.local/share/agent-office/inbox/*.jsonl` (estimated) | `AGENT_OFFICE_INBOX` overrides the inbox directory |
+
+macOS and Linux locations are estimates and have not been verified on those operating systems.
+On Windows, Claude Code, Codex, and Antigravity also check matching WSL home directories when available.
 
 The application formats and releases used by these integrations are not pinned. Compatibility with each agent application's current release is **unverified**; log format changes can interrupt detection.
 
 | Component | Version status |
 |---|---|
-| Agent Office source in this repository | 0.4.0 |
+| Agent Office source in this repository | 0.4.1 |
 | Node.js | 24 or newer required; tested patch version unverified |
 | Claude Code | Unverified |
 | Claude Desktop | Unverified |
 | Claude Cowork | Unverified |
 | Codex | Unverified |
 | Antigravity | Unverified |
+| OpenCode | Unverified |
+
+### macOS desktop bundle (testing, unverified)
+
+Download the DMG from Releases, open it, and move Agent Office to Applications. The app is not notarized. If Gatekeeper blocks the first launch, Control-click the app and choose **Open**. If macOS still blocks it, run:
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Agent\ Office.app
+```
+
+The macOS widget uses **Control+Option+O** to toggle click-through. Logs are read from the macOS paths in the table above; those paths remain unverified.
 
 ## Widget controls
 
-The Windows widget toolbar switches between the office and mini bar, toggles click-through with the pin, opens settings, or hides the widget to the tray. The settings panel contains three themes (office, space station, restaurant), view rotation, background and overall opacity, automatic dimming, connection status, and folder selection. The main web view keeps its theme and rotation controls in the header. Press **Ctrl+Alt+O** to toggle click-through.
+The desktop widget toolbar switches between the office and mini bar, changes themes and views, adjusts opacity, toggles click-through with the pin, opens settings, or hides the widget to the tray. The settings panel contains connection status and folder selection. On Windows, press **Ctrl+Alt+O**; on macOS, press **Control+Option+O** to toggle click-through. The macOS bundle is in testing and has not been verified.
 
 The mini bar is available at `http://127.0.0.1:4777/mini`. The desktop widget uses `http://127.0.0.1:4777/widget`.
 
@@ -70,7 +85,7 @@ Agent log formats are undocumented and can change without notice. The applicatio
 
 ## Trademarks
 
-Claude, Claude Code, and Anthropic are trademarks of Anthropic. Codex and OpenAI are trademarks of OpenAI. Gemini, Antigravity, and Google are trademarks of Google. Agent Office is an independent project and is not affiliated with, sponsored by, or endorsed by these companies. See the [Anthropic trademark guidance](https://www.anthropic.com/legal), [OpenAI brand guidelines](https://openai.com/brand/), and [Google brand guidance](https://about.google/brand-resource-center/guidance/).
+Claude, Claude Code, and Anthropic are trademarks of Anthropic. Codex and OpenAI are trademarks of OpenAI. Gemini, Antigravity, and Google are trademarks of Google. opencode is a trademark of its respective owner. Agent Office is an independent project and is not affiliated with, sponsored by, or endorsed by these companies. See the [Anthropic trademark guidance](https://www.anthropic.com/legal), [OpenAI brand guidelines](https://openai.com/brand/), and [Google brand guidance](https://about.google/brand-resource-center/guidance/).
 
 ---
 
@@ -98,29 +113,44 @@ Start-Process http://127.0.0.1:4777
 
 ## 지원 에이전트와 기록 위치
 
-| 에이전트 | 기본 기록 위치 | 설명 |
-|---|---|---|
-| Claude Code | `%USERPROFILE%\.claude\projects\<프로젝트>\*.jsonl` | 세션 기록 |
-| Claude Desktop | `%USERPROFILE%\.claude\projects\...` | Code 탭 기록은 Claude Code와 공유. 예전 에이전트 모드 기록 `%APPDATA%\Claude\local-agent-mode-sessions\`도 지원 |
-| Codex | `%CODEX_HOME%\sessions\YYYY\MM\DD\rollout-*.jsonl` | 기본 위치 `%USERPROFILE%\.codex\sessions\` |
-| Antigravity | `%USERPROFILE%\.gemini\antigravity\brain\<대화ID>\.system_generated\logs\transcript.jsonl` | 대화 기록 |
-| Claude Cowork 인박스 | `%LOCALAPPDATA%\AgentOffice\inbox\*.jsonl` | 선택 기능인 로컬 상태 보고 인박스 |
+| 에이전트 | Windows | macOS | Linux | 설명 |
+|---|---|---|---|---|
+| Claude Code | `%USERPROFILE%\.claude\projects\<프로젝트>\*.jsonl` | `~/.claude/projects/<프로젝트>/*.jsonl` (추정) | `~/.claude/projects/<프로젝트>/*.jsonl` (추정) | `CLAUDE_CONFIG_DIR`로 `.claude` 디렉터리 재지정 가능 |
+| Claude Desktop | Code 탭: Claude Code 경로, 구형 기록: `%APPDATA%\Claude\local-agent-mode-sessions` | Code 탭: Claude Code 경로, 구형 기록: `~/Library/Application Support/Claude/local-agent-mode-sessions` (추정) | Code 탭: Claude Code 경로, 구형 기록: `~/.config/Claude/local-agent-mode-sessions` (추정) | Code 탭 기록은 Claude Code와 공유 |
+| Codex | `%CODEX_HOME%\sessions\YYYY\MM\DD\rollout-*.jsonl` 또는 `%USERPROFILE%\.codex\sessions` | `$CODEX_HOME/sessions/...` 또는 `~/.codex/sessions/...` (추정) | `$CODEX_HOME/sessions/...` 또는 `~/.codex/sessions/...` (추정) | `CODEX_HOME`으로 `.codex` 디렉터리 재지정 가능 |
+| Antigravity | `%USERPROFILE%\.gemini\antigravity\brain\<대화ID>\.system_generated\logs\transcript.jsonl` | `~/.gemini/antigravity/brain/<대화ID>/.system_generated/logs/transcript.jsonl` (추정) | `~/.gemini/antigravity/brain/<대화ID>/.system_generated/logs/transcript.jsonl` (추정) | 대화 기록 |
+| OpenCode | `%XDG_DATA_HOME%\opencode\opencode.db` 또는 `%USERPROFILE%\.local\share\opencode\opencode.db` | `$XDG_DATA_HOME/opencode/opencode.db` 또는 `~/.local/share/opencode/opencode.db` (추정) | `$XDG_DATA_HOME/opencode/opencode.db` 또는 `~/.local/share/opencode/opencode.db` (추정) | SQLite 기록, `XDG_DATA_HOME` 재지정 지원 |
+| Claude Cowork 인박스 | `%LOCALAPPDATA%\AgentOffice\inbox\*.jsonl` | `~/Library/Application Support/AgentOffice/inbox/*.jsonl` (추정) | `~/.local/share/agent-office/inbox/*.jsonl` (추정) | `AGENT_OFFICE_INBOX`로 경로 재지정 가능 |
+
+macOS와 Linux 경로는 해당 운영체제에서 실제 확인하지 않은 추정값입니다.
+Windows에서는 WSL을 사용할 수 있을 때 Claude Code, Codex, Antigravity의 대응 경로도 함께 확인합니다.
 
 각 에이전트 앱의 호환 버전은 고정하지 않았습니다. 현재 앱 버전과의 호환성은 **미확인**이며 로그 형식이 바뀌면 감지가 중단될 수 있습니다.
 
 | 구성 요소 | 버전 상태 |
 |---|---|
-| 이 저장소의 Agent Office 소스 | 0.4.0 |
+| 이 저장소의 Agent Office 소스 | 0.4.1 |
 | Node.js | 24 이상 필요, 검증한 세부 버전은 미확인 |
 | Claude Code | 미확인 |
 | Claude Desktop | 미확인 |
 | Claude Cowork | 미확인 |
 | Codex | 미확인 |
 | Antigravity | 미확인 |
+| OpenCode | 미확인 |
+
+### macOS 데스크톱 앱 (시험 중·미검증)
+
+Releases에서 DMG를 내려받아 열고 Agent Office를 Applications 폴더로 옮기세요. 앱은 공증하지 않은 상태입니다. 처음 실행이 막히면 앱을 Control-클릭해 **열기**를 고르세요. 그래도 열리지 않으면 터미널에서 다음 명령을 실행하세요.
+
+```sh
+xattr -dr com.apple.quarantine /Applications/Agent\ Office.app
+```
+
+macOS 위젯에서 클릭 통과를 바꾸는 단축키는 **Control+Option+O**입니다. 로그는 위 표의 macOS 경로에서 읽지만 아직 검증되지 않았습니다.
 
 ## 위젯 조작
 
-Windows 위젯 도구막대에서 오피스·미니 바를 바꾸고, 핀으로 클릭 통과를 켜고 끄며, 설정을 열거나 위젯을 트레이로 숨길 수 있습니다. 설정 패널에서 오피스·우주 정거장·레스토랑 테마, 시점 회전, 배경·전체 투명도, 자동 흐림, 연결 상태와 폴더 연결을 관리합니다. 본 화면의 테마·회전 조작은 헤더에 남아 있습니다. **Ctrl+Alt+O**로 클릭 통과를 전환합니다.
+데스크톱 위젯 도구막대에서 오피스·미니 바, 테마, 시점, 투명도, 핀, 설정과 숨기기를 조작합니다. 설정 패널에서 연결 상태와 폴더 연결을 관리합니다. Windows 단축키는 **Ctrl+Alt+O**, macOS 단축키는 **Control+Option+O**입니다. macOS 앱은 시험 중이며 미검증입니다.
 
 미니 바 주소는 `http://127.0.0.1:4777/mini`, 데스크톱 위젯 주소는 `http://127.0.0.1:4777/widget`입니다.
 
@@ -146,4 +176,4 @@ Agent Office는 로컬 기록을 읽기 전용으로 열고 서버를 `127.0.0.1
 
 ## 상표
 
-Claude, Claude Code, Anthropic은 Anthropic의 상표입니다. Codex와 OpenAI는 OpenAI의 상표입니다. Gemini, Antigravity, Google은 Google의 상표입니다. Agent Office는 독립 프로젝트이며 해당 회사와 제휴·후원·보증 관계가 없습니다. [Anthropic 상표 안내](https://www.anthropic.com/legal), [OpenAI 브랜드 지침](https://openai.com/brand/), [Google 브랜드 안내](https://about.google/brand-resource-center/guidance/)를 참고하세요.
+Claude, Claude Code, Anthropic은 Anthropic의 상표입니다. Codex와 OpenAI는 OpenAI의 상표입니다. Gemini, Antigravity, Google은 Google의 상표입니다. opencode는 해당 권리자의 상표입니다. Agent Office는 독립 프로젝트이며 해당 회사와 제휴·후원·보증 관계가 없습니다. [Anthropic 상표 안내](https://www.anthropic.com/legal), [OpenAI 브랜드 지침](https://openai.com/brand/), [Google 브랜드 안내](https://about.google/brand-resource-center/guidance/)를 참고하세요.

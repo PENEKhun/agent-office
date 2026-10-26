@@ -47,17 +47,19 @@ const server = createServer({
   diagnostics: () => ({
     eventsBySource,
     ...(scanner?.diagnostics() ?? {
-      watchedFilesBySource: {}, ignoredCountBySource: {}, unknownCountBySource: {}
+      watchedFilesBySource: {}, ignoredCountBySource: {}, unknownCountBySource: {}, databaseErrorCountBySource: {}
     })
   }),
   connectivity: () => {
     const scanned = scanner?.connectivity() ?? {};
     const watched = scanner?.diagnostics().watchedFilesBySource ?? {};
-    const sources = Object.fromEntries(['claude-code', 'claude-desktop', 'codex', 'antigravity'].map((source) => {
+    const sources = Object.fromEntries(['claude-code', 'claude-desktop', 'codex', 'antigravity', 'opencode'].map((source) => {
       const rootSource = source === 'claude-desktop' ? 'claude-code' : source;
       const folder = scanned[rootSource]?.folder ?? false;
-      const recent = (watched[source] ?? 0) > 0;
-      return [source, { folder, recent, lastEventAt: lastEventAtBySource[source] ?? null }];
+      // Claude Code와 Desktop은 같은 폴더를 읽고 세션마다 출처가 갈리므로, 출처별로 감시 중인 파일 수로 판단한다
+      const recent = source.startsWith('claude-') ? (watched[source] ?? 0) > 0
+        : scanned[rootSource]?.recent ?? ((watched[source] ?? 0) > 0);
+      return [source, { folder, recent, lastEventAt: lastEventAtBySource[source] ?? scanned[rootSource]?.lastEventAt ?? null }];
     }));
     return { sources };
   },

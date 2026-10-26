@@ -7,4 +7,4 @@
 
 ## Trademarks
 
-Claude, Claude Code, and Anthropic are trademarks of Anthropic. Codex and OpenAI are trademarks of OpenAI. Gemini, Antigravity, and Google are trademarks of Google. These names identify compatible products only. Agent Office is unofficial and is not affiliated with, sponsored by, or endorsed by Anthropic, OpenAI, or Google. See the [Anthropic trademark guidance](https://www.anthropic.com/legal), [OpenAI brand guidelines](https://openai.com/brand/), and [Google brand guidance](https://about.google/brand-resource-center/guidance/).
+Claude, Claude Code, and Anthropic are trademarks of Anthropic. Codex and OpenAI are trademarks of OpenAI. Gemini, Antigravity, and Google are trademarks of Google. opencode is a trademark of its respective owner. These names identify compatible products only. Agent Office is unofficial and is not affiliated with, sponsored by, or endorsed by Anthropic, OpenAI, or Google. See the [Anthropic trademark guidance](https://www.anthropic.com/legal), [OpenAI brand guidelines](https://openai.com/brand/), and [Google brand guidance](https://about.google/brand-resource-center/guidance/).

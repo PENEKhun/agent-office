@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { win32 } from 'node:path';
 import { redactCommand, redactFilePath, redactMcpName } from '../src/lib/redact.js';
 import { detectGitAction, isSearchCommand } from '../src/lib/git-detect.js';
 
 test('redacts paths and commands to approved short labels', () => {
-  assert.equal(redactFilePath('C:\\private\\src\\Sample.java'), 'Sample.java');
+  assert.equal(redactFilePath(win32.join('C:', 'private', 'src', 'Sample.java')), 'Sample.java');
   assert.equal(redactCommand('git -C secret push origin main'), 'git');
   assert.equal(redactMcpName('mcp__server__tool_name'), 'server/tool_name');
   assert.equal(redactCommand(null), null);

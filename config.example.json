@@ -20,6 +20,10 @@
     "claude-desktop": {
       "enabled": true,
       "path": null
+    },
+    "opencode": {
+      "enabled": true,
+      "path": null
     }
   }
 }

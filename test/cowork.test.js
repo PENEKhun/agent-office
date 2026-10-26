@@ -56,15 +56,20 @@ test('모르는 형식은 throw 없이 빈 배열', () => {
 
 test('인박스 바로 아래 jsonl만 받는다', () => {
   assert.ok(adapter.match(join(root, 'cowork-1.jsonl')));
+  assert.ok(adapter.match(join(root, 'cowork-1.JSONL')));
   assert.ok(!adapter.match(join(root, 'sub', 'a.jsonl')));
   assert.ok(!adapter.match(join(root, 'a.txt')));
   assert.ok(!adapter.match(join('C:', 'other', 'a.jsonl')));
 });
 
-test('인박스 위치는 환경 변수, LOCALAPPDATA, 홈 순서로 정한다', () => {
+test('인박스 위치는 환경 변수와 운영체제 기본 경로를 따른다', () => {
   assert.equal(inboxRoot({ AGENT_OFFICE_INBOX: 'X' }), 'X');
   assert.equal(inboxRoot({ LOCALAPPDATA: 'L' }), join('L', 'AgentOffice', 'inbox'));
-  assert.match(inboxRoot({}), /\.agent-office/);
+  assert.equal(inboxRoot({}, { platform: 'linux', home: '/home/example' }), '/home/example/.local/share/agent-office/inbox');
+  assert.equal(inboxRoot({}, { platform: 'darwin', home: '/Users/example' }),
+    '/Users/example/Library/Application Support/AgentOffice/inbox');
+  assert.equal(inboxRoot({}, { platform: 'win32', home: 'C:\\Users\\example' }),
+    'C:\\Users\\example\\AppData\\Local\\AgentOffice\\inbox');
 });
 
 test('실행 중에 새로 생긴 인박스 파일도 첫 줄부터 읽는다', async () => {

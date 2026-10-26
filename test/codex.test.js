@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { join, win32 } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { loadAdapters } from '../src/adapters/index.js';
 import codexAdapter, { createCodexAdapter } from '../src/adapters/codex.js';
@@ -7,22 +8,24 @@ import { validateEvent } from '../src/core/events.js';
 
 test('adapter index loads Codex with the other sources', async () => {
   const adapters = await loadAdapters();
-  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork']);
+  assert.deepEqual(adapters.map((adapter) => adapter.id), ['antigravity', 'claude-code', 'codex', 'cowork', 'opencode']);
 });
 
 test('matches rollout JSONL files below the configured sessions root', () => {
-  const adapter = createCodexAdapter({ roots: () => ['C:\\redacted\\sessions'] });
-  assert.equal(adapter.match('C:\\redacted\\sessions\\2026\\rollout-session.jsonl'), true);
-  assert.equal(adapter.match('C:\\redacted\\sessions\\rollout-session.txt'), false);
-  assert.equal(adapter.match('C:\\other\\rollout-session.jsonl'), false);
+  const root = join('redacted', 'sessions');
+  const adapter = createCodexAdapter({ roots: () => [root] });
+  assert.equal(adapter.match(join(root, '2026', 'rollout-session.jsonl')), true);
+  assert.equal(adapter.match(join(root, '2026', 'ROLLOUT-SESSION.JSONL')), true);
+  assert.equal(adapter.match(join(root, 'rollout-session.txt')), false);
+  assert.equal(adapter.match(join('other', 'rollout-session.jsonl')), false);
 });
 
 test('uses the trailing filename UUID and primes project without replacing the session ID', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\sessions\\rollout-redacted-123e4567-e89b-12d3-a456-426614174000.jsonl');
+  const session = adapter.createSession(join('sessions', 'rollout-redacted-123e4567-e89b-12d3-a456-426614174000.jsonl'));
   adapter.primeSession(session, JSON.stringify({
     type: 'session_meta',
-    payload: { id: 'different-redacted-id', cwd: 'C:\\Workspace\\Project' }
+    payload: { id: 'different-redacted-id', cwd: win32.join('C:', 'Workspace', 'Project') }
   }));
   assert.equal(session.sessionId, '123e4567-e89b-12d3-a456-426614174000');
   assert.equal(session.project, 'c:/Workspace/Project');
@@ -32,7 +35,7 @@ test('parses redacted fixture events without forwarding source content', async (
   const fixture = new URL('./fixtures/codex/rollout-structure.jsonl', import.meta.url);
   const lines = (await readFile(fixture, 'utf8')).trim().split('\n');
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-123e4567-e89b-12d3-a456-426614174000.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-123e4567-e89b-12d3-a456-426614174000.jsonl'));
   const events = lines.flatMap((line) => adapter.parseLine(session, line));
 
   assert.deepEqual(events.map((event) => event.kind), [
@@ -47,11 +50,11 @@ test('parses redacted fixture events without forwarding source content', async (
 
 test('maps a local session, command timing, git success, and redacted output', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-123e4567-e89b-12d3-a456-426614174000.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-123e4567-e89b-12d3-a456-426614174000.jsonl'));
   const [start] = adapter.parseLine(session, JSON.stringify({
     type: 'session_meta',
     timestamp: '2026-10-20T00:00:00Z',
-    payload: { id: 'session-redacted', cwd: 'C:\\Workspace\\Project' }
+    payload: { id: 'session-redacted', cwd: win32.join('C:', 'Workspace', 'Project') }
   }));
   const events = adapter.parseLine(session, JSON.stringify({
     type: 'event_msg',
@@ -84,7 +87,7 @@ test('maps a local session, command timing, git success, and redacted output', (
 
 test('handles the command argument array shape found in current rollouts', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-session.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-session.jsonl'));
   const [start, end] = adapter.parseLine(session, JSON.stringify({
     type: 'event_msg',
     payload: {
@@ -93,7 +96,7 @@ test('handles the command argument array shape found in current rollouts', () =>
       completed_at_ms: 20,
       item: {
         type: 'CommandExecution',
-        command: ['C:\\Tools\\pwsh.exe', '-Command', 'rg <redacted>'],
+        command: [win32.join('C:', 'Tools', 'pwsh.exe'), '-Command', 'rg <redacted>'],
         exit_code: 0
       }
     }
@@ -105,7 +108,7 @@ test('handles the command argument array shape found in current rollouts', () =>
 
 test('uses the shell script for command detail, search classification, and git detection', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-session.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-session.jsonl'));
   const [searchStart] = adapter.parseLine(session, JSON.stringify({
     type: 'event_msg',
     payload: {
@@ -136,7 +139,7 @@ test('uses the shell script for command detail, search classification, and git d
 
 test('maps file changes, MCP tool names, Extension, thinking, and agent messages safely', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-session.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-session.jsonl'));
   const makeRow = (item) => JSON.stringify({
     type: 'event_msg',
     timestamp: '2026-10-20T00:00:00Z',
@@ -145,7 +148,7 @@ test('maps file changes, MCP tool names, Extension, thinking, and agent messages
 
   const fileEvents = adapter.parseLine(session, makeRow({
     type: 'FileChange',
-    changes: [{ path: 'C:\\private\\src\\Main.js' }],
+    changes: [{ path: win32.join('C:', 'private', 'src', 'Main.js') }],
     stdout: 'private diff'
   }));
   const mcpEvents = adapter.parseLine(session, makeRow({
@@ -172,7 +175,7 @@ test('maps file changes, MCP tool names, Extension, thinking, and agent messages
 
 test('separates intentionally ignored and unknown lines without throwing on malformed JSON', () => {
   const adapter = createCodexAdapter({ now: () => 1000 });
-  const session = adapter.createSession('C:\\redacted\\rollout-session.jsonl');
+  const session = adapter.createSession(join('redacted', 'rollout-session.jsonl'));
   assert.deepEqual(adapter.parseLine(session, '{'), []);
   assert.deepEqual(adapter.parseLine(session, JSON.stringify({ type: 'response_item', payload: {} })), []);
   assert.deepEqual(adapter.parseLine(session, JSON.stringify({ type: 'event_msg', payload: { type: 'turn_aborted' } })), []);

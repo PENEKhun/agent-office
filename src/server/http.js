@@ -51,7 +51,8 @@ const PUBLIC_FILES = new Map([
   ['/vendor/pixi.min.js','vendor/pixi.min.js'],
   ['/assets/icons/anthropic.svg','assets/icons/anthropic.svg'],
   ['/assets/icons/openai.svg','assets/icons/openai.svg'],
-  ['/assets/icons/googlegemini.svg','assets/icons/googlegemini.svg']
+  ['/assets/icons/googlegemini.svg','assets/icons/googlegemini.svg'],
+  ['/assets/icons/opencode.svg','assets/icons/opencode.svg']
 ]);
 
 function contentType(pathname) {
@@ -172,7 +173,7 @@ export function createServer({
         return;
       }
       readJsonBody(request).then(async (body) => {
-        const allowed = ['claude-code', 'claude-desktop', 'codex', 'antigravity'];
+        const allowed = ['claude-code', 'claude-desktop', 'codex', 'antigravity', 'opencode'];
         if (!allowed.includes(body?.source)) {
           response.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
           response.end(JSON.stringify({ error: 'A supported source is required.' }));

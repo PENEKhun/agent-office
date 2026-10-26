@@ -21,8 +21,8 @@ import { connectionStatusChip } from '/widget-settings.js';
 import { getTheme, listThemes, nextThemeId, setTheme } from '/themes/index.js';
 
 const PIXI = window.PIXI;
-const COLORS = { 'claude-code': 0xD97757, 'claude-desktop': 0xC2410C, codex: 0x10A37F, antigravity: 0x4285F4, cowork: 0x7C5CDB };
-const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic' };
+const COLORS = { 'claude-code': 0xD97757, 'claude-desktop': 0xC2410C, codex: 0x10A37F, antigravity: 0x4285F4, cowork: 0x7C5CDB, opencode: 0xC64D85 };
+const ICONS = { 'claude-code': 'anthropic', 'claude-desktop': 'anthropic', codex: 'openai', antigravity: 'googlegemini', cowork: 'anthropic', opencode: 'opencode' };
 const MAX_BUNDLE_HEAD_DISTANCE_PX = 48;
 const widgetPage = new URL(window.location.href).pathname === '/widget';
 const host = document.querySelector('#map-host');
@@ -678,7 +678,7 @@ async function refreshConnectionScreen() {
   const sources = Object.entries(result.sources);
   const explanation = screen.querySelector('#connection-explanation');
   if (explanation) {
-    explanation.textContent = '기록 파일은 이 PC에서만 읽습니다. Claude Desktop은 Claude Code 폴더에서 함께 읽습니다. 클라우드 세션은 표시되지 않습니다.';
+    explanation.textContent = '기록 파일과 OpenCode DB는 이 PC에서만 읽습니다. OpenCode는 로컬 opencode.db를 읽습니다. Claude Desktop은 Claude Code 폴더에서 함께 읽습니다. 클라우드 세션은 표시되지 않습니다.';
   }
   document.querySelector('#connection-sources').replaceChildren(...sources.map(([source, state]) => {
     const row = document.createElement('span');
